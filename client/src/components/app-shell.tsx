@@ -37,18 +37,20 @@ export function AppHeader() {
         <BrandLogo />
         <nav className="hidden items-center gap-1 lg:flex">
           {nav.map((n) => {
-            const active = n.to === "/" ? pathname === "/" : pathname.startsWith(n.to);
+            const active = n.to === "/" ? pathname === "/" : (pathname === n.to || pathname.startsWith(n.to + "/"));
             return (
               <Link
                 key={n.to}
                 to={n.to}
                 className={cn(
-                  "relative rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  active ? "text-primary" : "text-foreground/70 hover:text-foreground"
+                  "relative rounded-lg px-3 py-2 text-sm font-semibold transition-colors duration-200",
+                  active ? "text-primary font-bold" : "text-foreground/75 hover:text-foreground"
                 )}
               >
                 {n.label}
-                {active && <span className="absolute -bottom-[13px] left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-primary" />}
+                {active && (
+                  <span className="absolute -bottom-[21px] left-1 right-1 h-[3px] rounded-full bg-primary shadow-[0_1.5px_6px_oklch(0.62_0.24_26/_0.4)]" />
+                )}
               </Link>
             );
           })}

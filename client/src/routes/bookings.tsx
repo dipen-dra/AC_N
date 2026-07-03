@@ -94,34 +94,45 @@ function Bookings() {
             </div>
             <div className="mt-4 space-y-4">
               {filteredCurrentBookings.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">
-                  No bookings found under the selected filters.
+                <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-soft">
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-soft text-primary mb-4 animate-pulse">
+                    <Calendar className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground">No Current Bookings</h3>
+                  <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                    You don't have any bookings matching this status. Schedule a professional foam wash, wheel alignment, or engine servicing.
+                  </p>
+                  <div className="mt-6">
+                    <Link to="/book" className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/95 transition-colors cursor-pointer">
+                      <Plus className="h-4 w-4" /> Book a Service Now
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 filteredCurrentBookings.map((b: any) => (
-                  <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+                  <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft hover:shadow-md transition-shadow duration-200">
                     <div className="flex flex-wrap items-start gap-4">
                       <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary"><Wrench className="h-7 w-7" /></div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs text-muted-foreground">Booking ID</div>
+                        <div className="text-xs text-muted-foreground font-medium">Booking ID</div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                          <span className="font-bold">{b.id}</span>
-                          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", statusTone[b.status])}>{b.status}</span>
+                          <span className="font-bold text-foreground">{b.id}</span>
+                          <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", statusTone[b.status])}>{b.status}</span>
                         </div>
-                        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                          <InfoLine label="Service" value={<><span className="font-semibold">{b.service}</span></>} />
-                          <InfoLine label="Vehicle" value={b.vehicle} />
-                          <InfoLine label="Date & Time" value={<>{b.date}<div className="text-xs text-muted-foreground">{b.time}</div></>} />
-                          <InfoLine label="Location" value={<span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-primary" /> {b.location}</span>} />
+                        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
+                          <InfoLine label="Service" value={<span className="font-semibold text-primary">{b.service}</span>} />
+                          <InfoLine label="Vehicle Log" value={<span className="font-medium text-foreground">{b.vehicle}</span>} />
+                          <InfoLine label="Schedule" value={<div>{b.date} <div className="text-xs text-muted-foreground mt-0.5">{b.time}</div></div>} />
+                          <InfoLine label="Billing & Pickup" value={<div><span className="font-bold text-foreground">Rs. {b.price.toLocaleString()}</span><div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-0.5 truncate"><MapPin className="h-3 w-3 text-primary shrink-0" /> {b.location}</div></div>} />
                         </div>
                       </div>
                       <div className="flex w-full flex-col items-stretch gap-2.5 sm:w-auto sm:min-w-[220px]">
                         <div className="rounded-xl border border-border bg-secondary/40 p-3 text-xs">
-                          <div className="font-semibold">Estimated Delivery</div>
-                          <div className="mt-1 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-primary" /> {b.date}</div>
-                          <div className="mt-0.5 font-semibold text-primary">{b.eta || "Awaiting Confirmation"}</div>
+                          <div className="font-semibold text-muted-foreground">Estimated Delivery</div>
+                          <div className="mt-1 flex items-center gap-1.5 font-medium text-foreground"><Calendar className="h-3.5 w-3.5 text-primary" /> {b.date}</div>
+                          <div className="mt-1 font-bold text-primary">{b.eta || "Awaiting Confirmation"}</div>
                         </div>
-                        <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft">Track Service →</Link>
+                        <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft cursor-pointer">Track Service →</Link>
                         <button
                           onClick={() => handleCancelBooking(b.id)}
                           className="rounded-lg border border-border bg-background py-2 text-center text-sm font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
@@ -147,8 +158,14 @@ function Bookings() {
             </div>
             <div className="mt-4 space-y-3">
               {bookingHistory.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">
-                  No booking history found.
+                <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-soft">
+                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-secondary text-muted-foreground mb-4">
+                    <Wrench className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-md font-bold text-foreground">No Servicing History</h3>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
+                    Your completed, cancelled, or past servicing records will be archived here.
+                  </p>
                 </div>
               ) : (
                 bookingHistory.map((b: any) => (
