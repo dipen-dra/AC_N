@@ -125,3 +125,147 @@ export const getAdminAnalytics = async () => {
     };
   }
 };
+
+// 10. Get Admin Customers (Client API Fetcher)
+export const getAdminCustomers = async () => {
+  try {
+    const response = await fetch("/api/admin/customers");
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getAdminCustomers:", error);
+    return [];
+  }
+};
+
+// 11. Update Customer Status (Client API Fetcher)
+export const updateCustomerStatus = async ({ id, status }: { id: string; status: string }) => {
+  try {
+    const response = await fetch(`/api/admin/customers/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update status." };
+  }
+};
+
+// 12. Delete Customer (Client API Fetcher)
+export const deleteCustomer = async (id: string) => {
+  try {
+    const response = await fetch(`/api/admin/customers/${id}`, { method: "DELETE" });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to delete customer." };
+  }
+};
+
+// 13. Update Customer Role (Client API Fetcher)
+export const updateCustomerRole = async ({ id, role }: { id: string; role: string }) => {
+  try {
+    const response = await fetch(`/api/admin/customers/${id}/role`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update role." };
+  }
+};
+
+// 14. Create Service (Client API Fetcher)
+export const createService = async (data: any) => {
+  try {
+    const response = await fetch("/api/admin/services", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to create service." };
+  }
+};
+
+// 15. Update Service (Client API Fetcher)
+export const updateService = async ({ id, data }: { id: string; data: any }) => {
+  try {
+    const response = await fetch(`/api/admin/services/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update service." };
+  }
+};
+
+// 16. Delete Service (Client API Fetcher)
+export const deleteService = async (id: string) => {
+  try {
+    const response = await fetch(`/api/admin/services/${id}`, { method: "DELETE" });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to delete service." };
+  }
+};
+
+// 17. Redeem Loyalty Reward (Client API Fetcher)
+export const redeemReward = async ({ rewardName, cost }: { rewardName: string; cost: number }) => {
+  try {
+    const response = await fetch("/api/admin/loyalty/redeem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rewardName, cost }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to redeem reward." };
+  }
+};
+
+// 18. Submit Contact Form (Client API Fetcher)
+export const submitContact = async (data: { name: string; email: string; subject: string; message: string }) => {
+  try {
+    const response = await fetch("/api/admin/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to send message." };
+  }
+};
+
+// 19. Forgot Password (Client API Fetcher)
+export const forgotPassword = async (email: string) => {
+  try {
+    const response = await fetch("/api/auth/forgot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Request failed." };
+  }
+};
+
+// 20. Reset Password (Client API Fetcher)
+export const resetPassword = async (data: { email: string; token: string; password: string }) => {
+  try {
+    const response = await fetch("/api/auth/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Reset failed." };
+  }
+};

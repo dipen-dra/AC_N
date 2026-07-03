@@ -30,6 +30,7 @@ app.use("/api/services", require("./routes/services"));
 app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/chat", require("./routes/chat"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/contact", (req, res, next) => { req.url = "/contact"; next(); }, require("./routes/admin"));
 
 // Fallback error catcher
 app.use((err, req, res, next) => {

@@ -1,6 +1,9 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { Award, Gift, Sparkles, Star, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
+import { redeemReward } from "@/lib/db-server";
 
 export const Route = createFileRoute("/loyalty")({
   beforeLoad: ({ context }) => {
@@ -28,9 +31,32 @@ const rewards = [
 
 function Loyalty() {
   const { user } = Route.useRouteContext();
+  const router = useRouter();
   if (!user) return null;
 
-  const progress = Math.min((user.points / 2500) * 100, 100);
+  const [points, setPoints] = useState(user.points);
+  const [redeeming, setRedeeming] = useState<string | null>(null);
+
+  const progress = Math.min((points / 2500) * 100, 100);
+
+  const handleRedeem = async (r: typeof rewards[0]) => {
+    if (points < r.cost) { toast.error("Insufficient points."); return; }
+    setRedeeming(r.name);
+    try {
+      const res = await redeemReward({ rewardName: r.name, cost: r.cost });
+      if (res.success) {
+        setPoints(res.points);
+        toast.success(`🎉 "${r.name}" redeemed! -${r.cost} pts`);
+        router.invalidate();
+      } else {
+        toast.error(res.error || "Redemption failed.");
+      }
+    } catch {
+      toast.error("Something went wrong.");
+    } finally {
+      setRedeeming(null);
+    }
+  };
   
   return (
     <AppShell>
@@ -48,7 +74,7 @@ function Loyalty() {
             </div>
             <div className="text-right">
               <div className="text-xs opacity-80">Available balance</div>
-              <div className="text-5xl font-extrabold">{user.points.toLocaleString()}</div>
+              <div className="text-5xl font-extrabold">{points.toLocaleString()}</div>
               <div className="text-xs opacity-80">points</div>
             </div>
           </div>
@@ -78,7 +104,13 @@ function Loyalty() {
                 <div className="mt-1 text-sm text-muted-foreground">Redeem now</div>
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                   <div className="text-sm font-bold text-primary">{r.cost} pts</div>
-                  <button disabled={user.points < r.cost} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50">Redeem</button>
+                  <button
+                    disabled={points < r.cost || redeeming === r.name}
+                    onClick={() => handleRedeem(r)}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {redeeming === r.name ? "Redeeming..." : "Redeem"}
+                  </button>
                 </div>
               </div>
             ))}

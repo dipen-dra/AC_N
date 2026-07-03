@@ -2,6 +2,8 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
+const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
 const { requireAuth } = require("../middleware/auth");
@@ -9,7 +11,18 @@ const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "autocare_secret_key_123456";
 
-// Multer: store avatar in memory, 2MB limit
+// Rate limiter: max 10 requests per 15 minutes on auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: "Too many attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// In-memory password reset tokens (keyed by email) — expires 1 hour
+const resetTokens = new Map();
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
@@ -21,8 +34,8 @@ const upload = multer({
   }
 });
 
-// REGISTER
-router.post("/register", async (req, res) => {
+// REGISTER (rate limited)
+router.post("/register", authLimiter, async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
     if (!name || !email || !password) {
@@ -94,8 +107,8 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// LOGIN
-router.post("/login", async (req, res) => {
+// LOGIN (rate limited)
+router.post("/login", authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -251,6 +264,51 @@ router.get("/notifications", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Notifications error:", err);
     res.json({ success: true, count: 0, notifications: [] });
+  }
+});
+
+// FORGOT PASSWORD — generates a reset token
+router.post("/forgot", authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, error: "Email is required." });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always respond success to not leak existence of emails
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const expires = Date.now() + 60 * 60 * 1000; // 1 hour
+      resetTokens.set(email.toLowerCase().trim(), { token, expires });
+      // In production you'd send via nodemailer. For now log it:
+      console.log(`[PASSWORD RESET] Token for ${email}: ${token}`);
+      const log = new AuditLog({ id: `L-${Date.now()}`, userEmail: email, action: "Password reset requested", entity: "Auth", ip: req.ip || "-", time: new Date().toLocaleString(), severity: "warn" });
+      await log.save();
+    }
+    res.json({ success: true, message: "If that email exists, a reset link has been sent. Check console for dev token." });
+  } catch (err) {
+    console.error("Forgot password error:", err);
+    res.status(500).json({ success: false, error: "Failed to process request." });
+  }
+});
+
+// RESET PASSWORD — validates token and sets new password
+router.post("/reset", authLimiter, async (req, res) => {
+  try {
+    const { email, token, password } = req.body;
+    if (!email || !token || !password) return res.status(400).json({ success: false, error: "Email, token, and new password are required." });
+    const stored = resetTokens.get(email.toLowerCase().trim());
+    if (!stored || stored.token !== token || Date.now() > stored.expires) {
+      return res.status(400).json({ success: false, error: "Invalid or expired reset token." });
+    }
+    if (password.length < 6) return res.status(400).json({ success: false, error: "Password must be at least 6 characters." });
+    const passwordHash = bcrypt.hashSync(password, 10);
+    await User.findOneAndUpdate({ email: email.toLowerCase().trim() }, { passwordHash });
+    resetTokens.delete(email.toLowerCase().trim());
+    const log = new AuditLog({ id: `L-${Date.now()}`, userEmail: email, action: "Password reset completed", entity: "Auth", ip: req.ip || "-", time: new Date().toLocaleString(), severity: "info" });
+    await log.save();
+    res.json({ success: true, message: "Password reset successful. You can now log in." });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    res.status(500).json({ success: false, error: "Failed to reset password." });
   }
 });
 

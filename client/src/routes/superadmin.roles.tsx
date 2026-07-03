@@ -1,7 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { Check, KeyRound, Plus, Users } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { roles } from "@/lib/mock";
+import { getAdminCustomers, updateCustomerRole } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/roles")({
   beforeLoad: ({ context }) => {
@@ -9,6 +12,7 @@ export const Route = createFileRoute("/superadmin/roles")({
       throw redirect({ to: "/login" });
     }
   },
+  loader: () => getAdminCustomers(),
   head: () => ({ meta: [{ title: "Roles & Access — Superadmin" }] }),
   component: Roles,
 });
@@ -21,6 +25,24 @@ const permissions = [
 ];
 
 function Roles() {
+  const initial = Route.useLoaderData();
+  const router = useRouter();
+  const [customers, setCustomers] = useState<any[]>(initial);
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const handleRoleChange = async (id: string, role: string) => {
+    setUpdating(id);
+    const res = await updateCustomerRole({ id, role });
+    if (res.success) {
+      setCustomers((prev) => prev.map((c) => c.id === id ? { ...c, role: res.role } : c));
+      toast.success(`Role updated to ${role}.`);
+      router.invalidate();
+    } else {
+      toast.error(res.error || "Failed to update role.");
+    }
+    setUpdating(null);
+  };
+
   return (
     <AdminShell kind="super">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -77,18 +99,42 @@ function Roles() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-2 text-lg font-bold"><Users className="h-5 w-5 text-primary" /> Recent role changes</div>
-        <div className="mt-4 divide-y divide-border">
-          {[
-            { u: "super@autocare.np", a: "Granted Admin", t: "aayusha.kc@autocare.np", when: "15 May 09:11 AM" },
-            { u: "super@autocare.np", a: "Revoked Technician", t: "prakash.a@autocare.np", when: "12 May 04:20 PM" },
-            { u: "super@autocare.np", a: "Created role", t: "Support Lead", when: "10 May 11:35 AM" },
-          ].map((c) => (
-            <div key={c.when} className="flex items-center justify-between py-3 text-sm">
-              <div><span className="font-semibold">{c.u}</span> <span className="text-muted-foreground">{c.a}</span> <span className="font-semibold">{c.t}</span></div>
-              <div className="text-xs text-muted-foreground">{c.when}</div>
-            </div>
-          ))}
+        <div className="flex items-center gap-2 text-lg font-bold mb-4"><Users className="h-5 w-5 text-primary" /> User Role Management</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 text-xs uppercase text-muted-foreground">
+              <tr><th className="px-4 py-3 text-left">User</th><th className="px-4 py-3 text-left">Email</th><th className="px-4 py-3 text-left">Current Role</th><th className="px-4 py-3 text-left">Change Role</th></tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {customers.length === 0 ? (
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No users found.</td></tr>
+              ) : (
+                customers.map((c) => (
+                  <tr key={c.id} className="hover:bg-secondary/30">
+                    <td className="px-4 py-3 font-semibold">{c.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${c.role === "Superadmin" ? "bg-primary/15 text-primary" : c.role === "Admin" ? "bg-info/15 text-info" : "bg-success/15 text-success"}`}>
+                        {c.role || "Customer"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        defaultValue={c.role || "Customer"}
+                        disabled={updating === c.id}
+                        onChange={(e) => handleRoleChange(c.id, e.target.value)}
+                        className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs outline-none focus:border-primary disabled:opacity-50"
+                      >
+                        <option value="Customer">Customer</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Superadmin">Superadmin</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </AdminShell>
