@@ -19,7 +19,7 @@ connectDB();
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:8080", "http://localhost:8081"],
+  origin: true, // Allow any origin dynamically (useful for local IP testing)
   credentials: true
 }));
 app.use(authenticateUser);
@@ -37,7 +37,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: "Server error occurred." });
 });
 
-// Start listening
-app.listen(PORT, () => {
-  console.log(`Express MERN server is running on port ${PORT}`);
+// Start listening on all network interfaces
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Express MERN server is running on port ${PORT} (0.0.0.0)`);
 });
