@@ -52,8 +52,8 @@ graph TD
         API -->|/api/... requests| Proxy[Vite Dev Server Proxy]
     end
 
-    subgraph Server [Express REST API - Port 5000]
-        Proxy -->|Forwards to localhost:5000| Route[Express Router]
+    subgraph Server [Express REST API - Port 5001]
+        Proxy -->|Forwards to localhost:5001| Route[Express Router]
         Route --> AuthM[JWT Cookie Middleware]
         AuthM --> Controllers[Controllers & Services]
     end
@@ -174,7 +174,7 @@ The platform uses five structured Mongoose collections:
 ### 1. Configure the Environment
 Create a `.env` file in the `/server` directory:
 ```env
-PORT=5000
+PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/autocare_nepal
 JWT_SECRET=your_custom_jwt_secret_key_here
 NODE_ENV=development
@@ -191,8 +191,8 @@ Launch both servers concurrently with a single command:
 ```bash
 npm run dev
 ```
-*   **Vite Frontend Dev Host**: `http://localhost:5173/` (reverse proxied `/api` to port 5000)
-*   **Express API Host**: `http://localhost:5000/`
+*   **Vite Frontend Dev Host**: `http://localhost:5173/` (reverse proxied `/api` to port 5001)
+*   **Express API Host**: `http://localhost:5001/`
 
 ---
 
