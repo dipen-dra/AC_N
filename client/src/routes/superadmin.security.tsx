@@ -1,5 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Activity, AlertTriangle, CheckCircle2, Globe, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { AdminShell, StatCard } from "@/components/admin-shell";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -16,6 +18,17 @@ export const Route = createFileRoute("/superadmin/security")({
 const attack = Array.from({ length: 24 }).map((_, i) => ({ h: `${i}h`, v: Math.round(Math.random() * 40 + (i > 18 ? 60 : 0)) }));
 
 function Security() {
+  const [lockouts, setLockouts] = useState([
+    { u: "rehan@autocare.np", r: "5 failed logins", w: "12 min ago" },
+    { u: "test@fixhub.com", r: "Suspicious IP (VPN)", w: "34 min ago" },
+    { u: "aayusha.kc@gmail.com", r: "Impossible travel", w: "1 hr ago" },
+  ]);
+
+  const handleUnlock = (email: string) => {
+    setLockouts(lockouts.filter((l) => l.u !== email));
+    toast.success(`Account ${email} has been successfully unlocked.`);
+  };
+
   return (
     <AdminShell kind="super">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -28,7 +41,7 @@ function Security() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Threats blocked" value="1,284" delta="12%" icon={ShieldAlert} tone="primary" />
-        <StatCard label="Locked accounts" value="14" icon={Lock} tone="warning" />
+        <StatCard label="Locked accounts" value={String(lockouts.length)} icon={Lock} tone="warning" />
         <StatCard label="2FA enrolled" value="92%" delta="4.3%" icon={ShieldCheck} tone="success" />
         <StatCard label="Uptime" value="99.98%" icon={Activity} tone="info" />
       </div>
@@ -71,16 +84,23 @@ function Security() {
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 text-lg font-bold"><Lock className="h-5 w-5 text-primary" /> Account lockouts</div>
           <div className="mt-4 divide-y divide-border">
-            {[
-              { u: "rehan@autocare.np", r: "5 failed logins", w: "12 min ago" },
-              { u: "test@fixhub.com", r: "Suspicious IP (VPN)", w: "34 min ago" },
-              { u: "aayusha.kc@gmail.com", r: "Impossible travel", w: "1 hr ago" },
-            ].map((l) => (
-              <div key={l.u} className="flex items-center justify-between py-3 text-sm">
-                <div><div className="font-semibold">{l.u}</div><div className="text-xs text-muted-foreground">{l.r} · {l.w}</div></div>
-                <button className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary">Unlock</button>
+            {lockouts.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                No accounts currently locked out.
               </div>
-            ))}
+            ) : (
+              lockouts.map((l) => (
+                <div key={l.u} className="flex items-center justify-between py-3 text-sm">
+                  <div><div className="font-semibold">{l.u}</div><div className="text-xs text-muted-foreground">{l.r} · {l.w}</div></div>
+                  <button 
+                    onClick={() => handleUnlock(l.u)}
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary cursor-pointer"
+                  >
+                    Unlock
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6">

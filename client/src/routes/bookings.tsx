@@ -1,8 +1,9 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
 import { Calendar, MapPin, MoreVertical, Plus, Wrench } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { getBookings } from "@/lib/db-server";
+import { getBookings, updateBookingStatus } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/bookings")({
@@ -26,14 +27,36 @@ const statusTone: Record<string, string> = {
 
 function Bookings() {
   const allBookings = Route.useLoaderData();
+  const router = useRouter();
   const [tab, setTab] = useState<"current" | "history">("current");
+  const [statusFilter, setStatusFilter] = useState("All Status");
 
   const currentBookings = allBookings.filter(
     (b) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
   );
+  
+  const filteredCurrentBookings = currentBookings.filter(
+    (b) => statusFilter === "All Status" || b.status === statusFilter
+  );
+
   const bookingHistory = allBookings.filter(
     (b) => b.status === "Completed" || b.status === "Cancelled",
   );
+
+  const handleCancelBooking = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+    try {
+      const res = await updateBookingStatus({ data: { id, status: "Cancelled" } });
+      if (res.success) {
+        toast.success(`Booking ${id} has been cancelled.`);
+        router.invalidate();
+      } else {
+        toast.error(res.error || "Failed to cancel booking.");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "An error occurred during cancellation.");
+    }
+  };
 
   return (
     <AppShell>
@@ -42,7 +65,7 @@ function Bookings() {
         <div className="flex items-center gap-6 border-b border-border">
           {(["current", "history"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={cn(
-              "relative px-1 pb-3 text-sm font-semibold capitalize",
+              "relative px-1 pb-3 text-sm font-semibold capitalize cursor-pointer",
               tab === t ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}>
               {t === "current" ? "Current Bookings" : "Booking History"}
@@ -58,17 +81,24 @@ function Bookings() {
                 <h2 className="text-xl font-bold">Current Bookings</h2>
                 <p className="text-sm text-muted-foreground">Your ongoing and upcoming services</p>
               </div>
-              <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
-                <option>All Status</option><option>In Progress</option><option>Upcoming</option><option>Confirmed</option>
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none"
+              >
+                <option>All Status</option>
+                <option>Upcoming</option>
+                <option>Confirmed</option>
+                <option>In Progress</option>
               </select>
             </div>
             <div className="mt-4 space-y-4">
-              {currentBookings.length === 0 ? (
+              {filteredCurrentBookings.length === 0 ? (
                 <div className="rounded-2xl border border-border bg-card p-10 text-center text-muted-foreground">
-                  No current bookings found.
+                  No bookings found under the selected filters.
                 </div>
               ) : (
-                currentBookings.map((b) => (
+                filteredCurrentBookings.map((b) => (
                   <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                     <div className="flex flex-wrap items-start gap-4">
                       <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary"><Wrench className="h-7 w-7" /></div>
@@ -79,21 +109,26 @@ function Bookings() {
                           <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", statusTone[b.status])}>{b.status}</span>
                         </div>
                         <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                          <InfoLine label="Service" value={<><span className="font-semibold">{b.service}</span><div className="text-xs text-muted-foreground">{b.desc}</div></>} />
+                          <InfoLine label="Service" value={<><span className="font-semibold">{b.service}</span></>} />
                           <InfoLine label="Vehicle" value={b.vehicle} />
                           <InfoLine label="Date & Time" value={<>{b.date}<div className="text-xs text-muted-foreground">{b.time}</div></>} />
                           <InfoLine label="Location" value={<span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-primary" /> {b.location}</span>} />
                         </div>
                       </div>
-                      <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:min-w-[220px]">
+                      <div className="flex w-full flex-col items-stretch gap-2.5 sm:w-auto sm:min-w-[220px]">
                         <div className="rounded-xl border border-border bg-secondary/40 p-3 text-xs">
                           <div className="font-semibold">Estimated Delivery</div>
                           <div className="mt-1 flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-primary" /> {b.date}</div>
-                          <div className="mt-0.5 font-semibold text-primary">{b.eta}</div>
+                          <div className="mt-0.5 font-semibold text-primary">{b.eta || "Awaiting Confirmation"}</div>
                         </div>
                         <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft">Track Service →</Link>
+                        <button 
+                          onClick={() => handleCancelBooking(b.id)}
+                          className="rounded-lg border border-border bg-background py-2 text-center text-sm font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
+                        >
+                          Cancel Booking
+                        </button>
                       </div>
-                      <button className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary"><MoreVertical className="h-4 w-4" /></button>
                     </div>
                   </article>
                 ))
