@@ -48,9 +48,6 @@ export function AppHeader() {
                 )}
               >
                 {n.label}
-                {active && (
-                  <span className="absolute -bottom-[21px] left-1 right-1 h-[3px] rounded-full bg-primary shadow-[0_1.5px_6px_oklch(0.62_0.24_26/_0.4)]" />
-                )}
               </Link>
             );
           })}

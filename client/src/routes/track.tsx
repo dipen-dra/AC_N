@@ -57,17 +57,36 @@ function TrackIndex() {
           <h2 className="text-lg font-bold">Your active bookings</h2>
           <div className="mt-4 space-y-3">
             {activeBookings.length === 0 ? (
-              <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-                No active bookings.
+              <div className="rounded-2xl border border-border bg-card p-12 text-center shadow-soft">
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-soft text-primary mb-4 animate-pulse">
+                  <Search className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">No Active Services</h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+                  You don't have any services currently in progress. Enter your booking ID above to track an old booking, or book a new service.
+                </p>
+                <div className="mt-6">
+                  <Link to="/book" className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/95 transition-colors cursor-pointer">
+                    Book a Service Now
+                  </Link>
+                </div>
               </div>
             ) : (
-              activeBookings.map((b) => (
-                <Link key={b.id} to="/track/$id" params={{ id: b.id }} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 hover:border-primary/40">
-                  <div>
-                    <div className="font-semibold">{b.id}</div>
-                    <div className="text-xs text-muted-foreground">{b.service} · {b.vehicle}</div>
+              activeBookings.map((b: any) => (
+                <Link key={b.id} to="/track/$id" params={{ id: b.id }} className="group flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft hover:shadow-md hover:border-primary/40 transition-all duration-200">
+                  <div className="flex items-center gap-4">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary group-hover:scale-105 transition-transform">
+                      <Search className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-foreground">{b.id}</div>
+                      <div className="text-sm text-muted-foreground mt-0.5">{b.service} &middot; {b.vehicle}</div>
+                    </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-4">
+                    <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold bg-primary-soft text-primary">{b.status}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
                 </Link>
               ))
             )}
