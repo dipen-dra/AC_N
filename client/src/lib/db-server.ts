@@ -95,7 +95,7 @@ export const sendChatMessage = async ({ data }: { data: any }) => {
 // 8. Get Audit Logs (Client API Fetcher)
 export const getAuditLogs = async () => {
   try {
-    const response = await fetch("/api/superadmin/audit");
+    const response = await fetch("/api/admin/audit");
     if (!response.ok) return [];
     return await response.json();
   } catch (error) {
