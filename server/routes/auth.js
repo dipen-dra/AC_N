@@ -11,11 +11,11 @@ const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "autocare_secret_key_123456";
 
-// Rate limiter: max 10 requests per 15 minutes on auth endpoints
+// Rate limiter: max 10 requests per 10 seconds on auth endpoints
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 10 * 1000,
   max: 10,
-  message: { success: false, error: "Too many attempts. Please try again in 15 minutes." },
+  message: { success: false, error: "Too many attempts. Please try again in 10 seconds." },
   standardHeaders: true,
   legacyHeaders: false
 });
