@@ -32,15 +32,15 @@ function Bookings() {
   const [statusFilter, setStatusFilter] = useState("All Status");
 
   const currentBookings = allBookings.filter(
-    (b) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
+    (b: any) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
   );
-  
+
   const filteredCurrentBookings = currentBookings.filter(
-    (b) => statusFilter === "All Status" || b.status === statusFilter
+    (b: any) => statusFilter === "All Status" || b.status === statusFilter
   );
 
   const bookingHistory = allBookings.filter(
-    (b) => b.status === "Completed" || b.status === "Cancelled",
+    (b: any) => b.status === "Completed" || b.status === "Cancelled",
   );
 
   const handleCancelBooking = async (id: string) => {
@@ -81,7 +81,7 @@ function Bookings() {
                 <h2 className="text-xl font-bold">Current Bookings</h2>
                 <p className="text-sm text-muted-foreground">Your ongoing and upcoming services</p>
               </div>
-              <select 
+              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none"
@@ -98,7 +98,7 @@ function Bookings() {
                   No bookings found under the selected filters.
                 </div>
               ) : (
-                filteredCurrentBookings.map((b) => (
+                filteredCurrentBookings.map((b: any) => (
                   <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                     <div className="flex flex-wrap items-start gap-4">
                       <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary"><Wrench className="h-7 w-7" /></div>
@@ -122,7 +122,7 @@ function Bookings() {
                           <div className="mt-0.5 font-semibold text-primary">{b.eta || "Awaiting Confirmation"}</div>
                         </div>
                         <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft">Track Service →</Link>
-                        <button 
+                        <button
                           onClick={() => handleCancelBooking(b.id)}
                           className="rounded-lg border border-border bg-background py-2 text-center text-sm font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
                         >
@@ -151,7 +151,7 @@ function Bookings() {
                   No booking history found.
                 </div>
               ) : (
-                bookingHistory.map((b) => (
+                bookingHistory.map((b: any) => (
                   <div key={b.id} className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[auto_2fr_1fr_1fr_1fr_auto]">
                     <div className="grid h-10 w-10 place-items-center rounded-lg bg-secondary text-muted-foreground"><Wrench className="h-5 w-5" /></div>
                     <div className="min-w-0">

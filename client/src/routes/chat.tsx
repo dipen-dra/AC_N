@@ -6,7 +6,7 @@ import { getChatMessages, sendChatMessage } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/chat")({
-  beforeLoad: ({ context }) => {
+  beforeLoad: ({ context }: { context: any }) => {
     if (!context.user) {
       throw redirect({ to: "/login" });
     }
@@ -109,7 +109,7 @@ function Chat() {
                   No messages yet. Start a conversation with our AI Assistant!
                 </div>
               ) : (
-                msgs.map((m, i) => (
+                msgs.map((m: any, i: number) => (
                   <div key={i} className={cn("flex items-end gap-2", m.role === "user" && "flex-row-reverse")}>
                     {m.role === "bot" && <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"><Bot className="h-4 w-4" /></div>}
                     <div className={cn(
@@ -130,7 +130,13 @@ function Chat() {
               <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
                 <button className="text-muted-foreground hover:text-foreground"><Paperclip className="h-4 w-4" /></button>
                 <button className="text-muted-foreground hover:text-foreground"><Smile className="h-4 w-4" /></button>
-                <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Type your message..." className="flex-1 bg-transparent py-2 text-sm outline-none" />
+                <input 
+                  value={text} 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)} 
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && send()} 
+                  placeholder="Type your message..." 
+                  className="flex-1 bg-transparent py-2 text-sm outline-none" 
+                />
                 <button onClick={send} className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"><Send className="h-4 w-4" /></button>
               </div>
             </div>

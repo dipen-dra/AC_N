@@ -34,7 +34,7 @@ function AdminBookings() {
   const [saving, setSaving] = useState(false);
 
   // Filter Logic
-  const filteredBookings = bookings.filter((b) => {
+  const filteredBookings = bookings.filter((b: any) => {
     const matchesSearch =
       b.id.toLowerCase().includes(search.toLowerCase()) ||
       b.customer.toLowerCase().includes(search.toLowerCase()) ||
@@ -83,7 +83,7 @@ function AdminBookings() {
   };
 
   // Derive unique services for the filter dropdown
-  const uniqueServices = Array.from(new Set(bookings.map((b) => b.service)));
+  const uniqueServices = Array.from(new Set(bookings.map((b: any) => b.service))) as string[];
 
   return (
     <AdminShell>
@@ -144,7 +144,7 @@ function AdminBookings() {
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((b) => (
+                filteredBookings.map((b: any) => (
                   <tr key={b.id} className="hover:bg-secondary/40">
                     <td className="px-4 py-3 font-semibold">{b.id}</td>
                     <td className="px-4 py-3">{b.customer}</td>
