@@ -1,9 +1,9 @@
 import { createFileRoute, Link, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { Bell, Camera, Car, KeyRound, LogOut, Mail, MapPin, Phone, Plus, Shield, ShieldCheck, Trash2, User, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { logoutUser } from "@/lib/auth-server";
+import { logoutUser, uploadAvatar } from "@/lib/auth-server";
 
 export const Route = createFileRoute("/profile")({
   beforeLoad: ({ context }) => {
@@ -23,6 +23,9 @@ function Profile() {
   if (!user) return null;
 
   const [activeTab, setActiveTab] = useState<"info" | "vehicles" | "security">("info");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatar || null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Profile Form State
   const [editingProfile, setEditingProfile] = useState(false);
@@ -50,6 +53,39 @@ function Profile() {
       }
     } catch (err: any) {
       toast.error(err?.message || "An error occurred during logout.");
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB.");
+      return;
+    }
+    // Optimistic preview
+    const reader = new FileReader();
+    reader.onload = () => setAvatarUrl(reader.result as string);
+    reader.readAsDataURL(file);
+
+    setUploadingAvatar(true);
+    try {
+      const res = await uploadAvatar(file);
+      if (res.success && res.avatar) {
+        setAvatarUrl(res.avatar);
+        await router.invalidate();
+        toast.success("Profile picture updated!");
+      } else {
+        toast.error(res.error || "Failed to upload photo.");
+      }
+    } catch {
+      toast.error("Upload failed. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -114,8 +150,30 @@ function Profile() {
               <div className="flex flex-wrap items-center gap-5 justify-between">
                 <div className="flex flex-wrap items-center gap-5">
                   <div className="relative">
-                    <div className="grid h-24 w-24 place-items-center rounded-full bg-foreground text-3xl font-bold text-background">{user.initial}</div>
-                    <button className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground cursor-pointer"><Camera className="h-4 w-4" /></button>
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={user.name} className="h-24 w-24 rounded-full object-cover border-2 border-border" />
+                    ) : (
+                      <div className="grid h-24 w-24 place-items-center rounded-full bg-foreground text-3xl font-bold text-background">{user.initial}</div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {uploadingAvatar ? (
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </button>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
                   </div>
                   <div>
                     <div className="text-xl font-bold">{user.name}</div>

@@ -8,6 +8,7 @@ export interface User {
   initial: string;
   status: string;
   role: string;
+  avatar: string | null;
 }
 
 // 1. Get Current User (Client API Fetcher)
@@ -64,5 +65,33 @@ export const logoutUser = async () => {
   } catch (error) {
     console.error("Error logging out user:", error);
     return { success: false, error: "Logout request failed." };
+  }
+};
+
+// 5. Upload Avatar (Client API Fetcher)
+export const uploadAvatar = async (file: File): Promise<{ success: boolean; avatar?: string; error?: string }> => {
+  try {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    const response = await fetch("/api/auth/avatar", {
+      method: "POST",
+      body: formData,
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    return { success: false, error: "Upload request failed." };
+  }
+};
+
+// 6. Get Notifications Count (Client API Fetcher)
+export const getNotifications = async (): Promise<{ count: number; notifications: any[] }> => {
+  try {
+    const response = await fetch("/api/auth/notifications");
+    if (!response.ok) return { count: 0, notifications: [] };
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return { count: 0, notifications: [] };
   }
 };

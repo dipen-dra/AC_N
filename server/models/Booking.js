@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
+  userId: { type: String, default: null }, // linked user ID
   customer: { type: String, required: true },
   customerEmail: { type: String, required: true },
   service: { type: String, required: true },
@@ -13,6 +14,6 @@ const bookingSchema = new mongoose.Schema({
   status: { type: String, default: "Upcoming" }, // Upcoming, Confirmed, In Progress, Completed, Cancelled
   technician: { type: String, default: "-" },
   eta: { type: String, default: "" }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model("Booking", bookingSchema);

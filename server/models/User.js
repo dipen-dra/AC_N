@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   tier: { type: String, default: "Bronze" },
   initial: { type: String, required: true },
   status: { type: String, default: "Active" },
-  role: { type: String, default: "Customer" } // Customer, Admin, Superadmin
+  role: { type: String, default: "Customer" }, // Customer, Admin, Superadmin
+  avatar: { type: String, default: null } // base64 or URL
 });
 
 module.exports = mongoose.model("User", userSchema);

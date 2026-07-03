@@ -1,11 +1,25 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "autocare_secret_key_123456";
+
+// Multer: store avatar in memory, 2MB limit
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) {
+      return cb(new Error("Only image files are allowed"));
+    }
+    cb(null, true);
+  }
+});
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -193,9 +207,51 @@ router.get("/me", (req, res) => {
       tier: req.user.tier,
       initial: req.user.initial,
       status: req.user.status,
-      role: req.user.role
+      role: req.user.role,
+      avatar: req.user.avatar || null
     }
   });
+});
+
+// UPLOAD AVATAR
+router.post("/avatar", requireAuth, upload.single("avatar"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "No image file provided." });
+    }
+    const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    await User.findByIdAndUpdate(req.user._id, { avatar: base64 });
+    res.json({ success: true, avatar: base64 });
+  } catch (err) {
+    console.error("Avatar upload error:", err);
+    res.status(500).json({ success: false, error: "Failed to upload avatar." });
+  }
+});
+
+// GET NOTIFICATIONS (derived from recent bookings)
+router.get("/notifications", requireAuth, async (req, res) => {
+  try {
+    const Booking = require("../models/Booking");
+    // Find user's bookings updated in the last 7 days with active statuses
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const bookings = await Booking.find({
+      userId: req.user.id,
+      updatedAt: { $gte: since }
+    }).sort({ updatedAt: -1 }).limit(10);
+
+    const notifications = bookings.map(b => ({
+      id: b.id,
+      title: `Booking ${b.id}`,
+      message: `Status: ${b.status}`,
+      time: b.updatedAt,
+      read: false
+    }));
+
+    res.json({ success: true, count: notifications.length, notifications });
+  } catch (err) {
+    console.error("Notifications error:", err);
+    res.json({ success: true, count: 0, notifications: [] });
+  }
 });
 
 module.exports = router;

@@ -49,6 +49,7 @@ router.post("/", requireAuth, async (req, res) => {
 
     const newBooking = new Booking({
       id: bookingId,
+      userId: req.user.id,
       customer: req.user.name,
       customerEmail: req.user.email,
       service,
