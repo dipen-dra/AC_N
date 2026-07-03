@@ -1,0 +1,96 @@
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { Check, KeyRound, Plus, Users } from "lucide-react";
+import { AdminShell } from "@/components/admin-shell";
+import { roles } from "@/lib/mock";
+
+export const Route = createFileRoute("/superadmin/roles")({
+  beforeLoad: ({ context }) => {
+    if (!context.user || context.user.role !== "Superadmin") {
+      throw redirect({ to: "/login" });
+    }
+  },
+  head: () => ({ meta: [{ title: "Roles & Access — Superadmin" }] }),
+  component: Roles,
+});
+
+const permissions = [
+  { g: "Bookings", p: ["View bookings", "Create bookings", "Cancel bookings", "Refund payments"] },
+  { g: "Services", p: ["View services", "Edit pricing", "Publish/unpublish"] },
+  { g: "Users", p: ["View users", "Suspend users", "Delete users", "Assign roles"] },
+  { g: "System", p: ["Access audit logs", "Manage integrations", "View security center"] },
+];
+
+function Roles() {
+  return (
+    <AdminShell kind="super">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold">Roles & Access</h1>
+          <p className="text-sm text-muted-foreground">Fine-grained role based access control (RBAC).</p>
+        </div>
+        <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" /> Create role</button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {roles.map((r) => (
+          <div key={r.name} className="rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /><div className="font-bold">{r.name}</div></div>
+            <div className="mt-1 text-xs text-muted-foreground">{r.desc}</div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div><div className="text-xs text-muted-foreground">Users</div><div className="font-bold">{r.users}</div></div>
+              <div><div className="text-xs text-muted-foreground">Permissions</div><div className="font-bold">{r.perms}</div></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card">
+        <div className="border-b border-border p-6">
+          <div className="text-lg font-bold">Permissions matrix</div>
+          <div className="text-sm text-muted-foreground">Toggle capabilities per role. Changes are audited.</div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/40 text-xs uppercase text-muted-foreground">
+              <tr><th className="px-4 py-3 text-left font-semibold">Permission</th>{roles.map((r) => <th key={r.name} className="px-4 py-3 text-center font-semibold">{r.name}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {permissions.map((group) => (
+                <>
+                  <tr key={group.g} className="bg-secondary/30"><td colSpan={roles.length + 1} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group.g}</td></tr>
+                  {group.p.map((p) => (
+                    <tr key={p}>
+                      <td className="px-4 py-3">{p}</td>
+                      {roles.map((r, i) => {
+                        const enabled = i === 0 || (i === 1 && !p.includes("Delete")) || (i === 2 && p.includes("View"));
+                        return <td key={r.name} className="px-4 py-3 text-center">
+                          {enabled ? <span className="mx-auto grid h-6 w-6 place-items-center rounded-full bg-success/15 text-success"><Check className="h-3.5 w-3.5" /></span> : <span className="text-muted-foreground">—</span>}
+                        </td>;
+                      })}
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center gap-2 text-lg font-bold"><Users className="h-5 w-5 text-primary" /> Recent role changes</div>
+        <div className="mt-4 divide-y divide-border">
+          {[
+            { u: "super@autocare.np", a: "Granted Admin", t: "aayusha.kc@autocare.np", when: "15 May 09:11 AM" },
+            { u: "super@autocare.np", a: "Revoked Technician", t: "prakash.a@autocare.np", when: "12 May 04:20 PM" },
+            { u: "super@autocare.np", a: "Created role", t: "Support Lead", when: "10 May 11:35 AM" },
+          ].map((c) => (
+            <div key={c.when} className="flex items-center justify-between py-3 text-sm">
+              <div><span className="font-semibold">{c.u}</span> <span className="text-muted-foreground">{c.a}</span> <span className="font-semibold">{c.t}</span></div>
+              <div className="text-xs text-muted-foreground">{c.when}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </AdminShell>
+  );
+}
