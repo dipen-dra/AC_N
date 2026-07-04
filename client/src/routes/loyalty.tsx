@@ -3,7 +3,7 @@ import { Award, Gift, Sparkles, Star, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { redeemReward } from "@/lib/db-server";
+import { redeemReward, getBookings } from "@/lib/db-server";
 
 export const Route = createFileRoute("/loyalty")({
   beforeLoad: ({ context }) => {
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/loyalty")({
       throw redirect({ to: "/login" });
     }
   },
+  loader: () => getBookings(),
   head: () => ({ meta: [{ title: "Loyalty Program — AutoCare Nepal" }] }),
   component: Loyalty,
 });
@@ -31,6 +32,7 @@ const rewards = [
 
 function Loyalty() {
   const { user } = Route.useRouteContext();
+  const bookings = Route.useLoaderData() || [];
   const router = useRouter();
   if (!user) return null;
 
@@ -136,19 +138,22 @@ function Loyalty() {
         <section className="mt-8 rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 text-lg font-bold"><TrendingUp className="h-5 w-5 text-primary" /> Recent activity</div>
           <div className="mt-4 divide-y divide-border">
-            {[
-              { d: "01 May 2026", a: "Earned +200 pts", b: "Full Service · AC-2026-0501-000098", pos: true },
-              { d: "22 Apr 2026", a: "Redeemed -300 pts", b: "Free Car Wash", pos: false },
-              { d: "10 Apr 2026", a: "Earned +80 pts", b: "Oil Change", pos: true },
-            ].map((r) => (
-              <div key={r.b + r.d} className="flex items-center justify-between py-3 text-sm">
-                <div>
-                  <div className="font-semibold">{r.b}</div>
-                  <div className="text-xs text-muted-foreground">{r.d}</div>
-                </div>
-                <div className={`font-bold ${r.pos ? "text-success" : "text-primary"}`}>{r.a}</div>
-              </div>
-            ))}
+            {bookings.length === 0 ? (
+              <div className="py-6 text-center text-sm text-muted-foreground">No recent loyalty activity found. Book services to earn points!</div>
+            ) : (
+              bookings.map((b: any) => {
+                const earned = Math.round(b.price * 0.1);
+                return (
+                  <div key={b.id} className="flex items-center justify-between py-3 text-sm">
+                    <div>
+                      <div className="font-semibold">{b.service} · {b.id}</div>
+                      <div className="text-xs text-muted-foreground">{b.date} · Status: {b.status}</div>
+                    </div>
+                    <div className="font-bold text-success">Earned +{earned} pts</div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </section>
       </div>
