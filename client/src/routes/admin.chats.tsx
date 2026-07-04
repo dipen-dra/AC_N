@@ -3,7 +3,7 @@ import { Bot, MessageSquare, Search, Send, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { getChatMessages, sendChatMessage } from "@/lib/db-server";
+import { getChatMessages, sendChatMessage, markChatAsRead } from "@/lib/db-server";
 
 export const Route = createFileRoute("/admin/chats")({
   beforeLoad: ({ context }) => {
@@ -23,54 +23,123 @@ function AdminChats() {
   const [sending, setSending] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  const load = async () => {
-    setLoading(true);
-    const msgs = await getChatMessages();
-    setMessages(msgs);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, []);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-  // Group messages by unique users
-  const userEmails = [...new Set(messages.map((m: any) => m.senderEmail).filter(Boolean))];
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
 
+  const load = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const msgs = await getChatMessages();
+      setMessages(msgs);
+    } catch (err) {
+      toast.error("Failed to load chat messages.");
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (userEmails.length > 0 && !activeEmail) setActiveEmail(userEmails[0]);
+    load();
+  }, []);
+
+  // Poll for new messages every 3 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const latest = await getChatMessages();
+        setMessages((prev) => {
+          if (latest.length !== prev.length || (latest.length > 0 && latest[latest.length - 1]._id !== prev[prev.length - 1]._id)) {
+            return latest;
+          }
+          return prev;
+        });
+      } catch (err) {
+        console.error("Polling admin chat failed:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Scroll to bottom on thread change or new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeEmail, messages.length]);
+
+  // Group messages by unique customer userEmail
+  const userEmails = [...new Set(messages.map((m: any) => m.userEmail).filter(Boolean))];
+
+  useEffect(() => {
+    if (userEmails.length > 0 && !activeEmail) {
+      setActiveEmail(userEmails[0]);
+    }
   }, [userEmails.length]);
 
-  const threadMsgs = messages.filter((m: any) =>
-    m.senderEmail === activeEmail || m.recipientEmail === activeEmail
-  );
+  // Mark customer messages as read when admin views the thread
+  useEffect(() => {
+    if (activeEmail) {
+      const hasUnread = messages.some(
+        (m: any) => m.userEmail === activeEmail && m.senderRole !== "Admin" && !m.read
+      );
+      if (hasUnread) {
+        markChatAsRead({ userEmail: activeEmail }).then((res) => {
+          if (res.success) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.userEmail === activeEmail && m.senderRole !== "Admin"
+                  ? { ...m, read: true }
+                  : m
+              )
+            );
+          }
+        });
+      }
+    }
+  }, [activeEmail, messages.length]);
 
-  const activeUser = messages.find((m: any) => m.senderEmail === activeEmail);
-
+  const threadMsgs = messages.filter((m: any) => m.userEmail === activeEmail);
   const filteredEmails = userEmails.filter((e) => e.toLowerCase().includes(searchQ.toLowerCase()));
+
   const latestByUser = (email: string) => {
-    const msgs = messages.filter((m: any) => m.senderEmail === email || m.recipientEmail === email);
+    const msgs = messages.filter((m: any) => m.userEmail === email);
     return msgs[msgs.length - 1];
   };
 
+  const getUnreadCount = (email: string) => {
+    return messages.filter((m: any) => m.userEmail === email && m.senderRole !== "Admin" && !m.read).length;
+  };
+
   const handleSend = async () => {
-    if (!reply.trim() || !activeEmail) return;
+    if (!reply.trim() || !activeEmail || sending) return;
     setSending(true);
-    const res = await sendChatMessage({ data: {
-      text: reply.trim(),
-      senderRole: "Admin",
-      senderName: user?.name || "Support",
-      senderEmail: "admin@autocare.np",
-      recipientEmail: activeEmail,
-    }});
-    if (res.success || res._id) {
-      await load();
-      setReply("");
-    } else {
-      toast.error("Failed to send reply.");
+    const textToSend = reply.trim();
+    setReply("");
+
+    try {
+      const res = await sendChatMessage({
+        data: {
+          text: textToSend,
+          recipientEmail: activeEmail
+        }
+      });
+      if (res.success || res.message) {
+        const newMsg = res.message || {
+          userEmail: activeEmail,
+          senderEmail: user?.email || "admin@autocare.com",
+          senderName: user?.name || "Support",
+          senderRole: "Admin",
+          text: textToSend,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          read: false
+        };
+        setMessages((prev) => [...prev, newMsg]);
+      } else {
+        toast.error("Failed to send reply.");
+      }
+    } catch {
+      toast.error("Error occurred while sending message.");
+    } finally {
+      setSending(false);
     }
-    setSending(false);
   };
 
   return (
@@ -80,7 +149,7 @@ function AdminChats() {
           <h1 className="text-3xl font-extrabold">Chats</h1>
           <p className="text-sm text-muted-foreground">Reply to customer conversations in real time.</p>
         </div>
-        <button onClick={load} className="grid h-9 w-9 place-items-center rounded-lg border border-border hover:bg-secondary">
+        <button onClick={() => load(true)} className="grid h-9 w-9 place-items-center rounded-lg border border-border hover:bg-secondary cursor-pointer">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
@@ -106,19 +175,26 @@ function AdminChats() {
             ) : (
               filteredEmails.map((email) => {
                 const last = latestByUser(email);
+                const unread = getUnreadCount(email);
                 return (
                   <button
                     key={email}
                     onClick={() => setActiveEmail(email)}
-                    className={`flex w-full items-start gap-3 border-b border-border p-4 text-left hover:bg-secondary/50 ${activeEmail === email ? "bg-primary-soft/60" : ""}`}
+                    className={`flex w-full items-start gap-3 border-b border-border p-4 text-left hover:bg-secondary/50 cursor-pointer ${activeEmail === email ? "bg-primary-soft/60" : ""}`}
                   >
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary font-bold">{email[0].toUpperCase()}</div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary font-bold text-sm">{email[0].toUpperCase()}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
                         <div className="truncate font-semibold text-sm">{email}</div>
+                        <div className="text-[10px] text-muted-foreground shrink-0">{last ? last.time : ""}</div>
                       </div>
                       <div className="mt-0.5 truncate text-xs text-muted-foreground">{last?.text || "No messages"}</div>
                     </div>
+                    {unread > 0 && (
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-bounce">
+                        {unread}
+                      </span>
+                    )}
                   </button>
                 );
               })
@@ -140,16 +216,13 @@ function AdminChats() {
                     <div className="text-xs text-success">● Live conversation</div>
                   </div>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold">
-                  <Bot className="h-4 w-4 text-primary" /> AI suggest reply
-                </button>
               </header>
               <div className="flex-1 space-y-4 overflow-y-auto p-6">
                 {threadMsgs.map((m: any, i: number) => {
                   const isAdmin = m.senderRole === "Admin";
                   return (
                     <div key={m._id || i} className={`flex items-end gap-2 ${isAdmin ? "flex-row-reverse" : ""}`}>
-                      {!isAdmin && <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-xs font-bold">{m.senderEmail?.[0]?.toUpperCase()}</div>}
+                      {!isAdmin && <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-xs font-bold text-muted-foreground">{m.senderName?.[0]?.toUpperCase() || "C"}</div>}
                       <div className={`max-w-md rounded-2xl px-4 py-2.5 text-sm ${isAdmin ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-secondary"}`}>
                         {m.text}
                       </div>
@@ -171,7 +244,7 @@ function AdminChats() {
                   <button
                     onClick={handleSend}
                     disabled={sending || !reply.trim()}
-                    className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50"
+                    className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground disabled:opacity-50 cursor-pointer"
                   >
                     <Send className="h-4 w-4" />
                   </button>

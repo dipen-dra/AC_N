@@ -92,6 +92,21 @@ export const sendChatMessage = async ({ data }: { data: any }) => {
   }
 };
 
+// 7.5. Mark Chat Messages as Read (Client API Fetcher)
+export const markChatAsRead = async (data?: { userEmail: string }) => {
+  try {
+    const response = await fetch("/api/chat/read", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data || {}),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error in markChatAsRead:", error);
+    return { success: false, error: "Failed to mark messages as read." };
+  }
+};
+
 // 8. Get Audit Logs (Client API Fetcher)
 export const getAuditLogs = async () => {
   try {
