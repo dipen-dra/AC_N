@@ -79,7 +79,7 @@ function Home() {
           </Link>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {services.map((s) => {
+          {services.map((s: any) => {
             const Icon = iconMap[s.icon] ?? Wrench;
             return (
               <Link key={s.id} to="/book" className="group rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary/30 hover:shadow-elevated">
