@@ -72,7 +72,17 @@ function Loyalty() {
                 <Award className="h-10 w-10" />
                 <div className="text-4xl font-extrabold">{user.tier}</div>
               </div>
-              <div className="mt-2 text-sm opacity-90">Keep it up! You're on fire 🔥</div>
+              <div className="mt-2 text-sm opacity-90">
+                {points === 0
+                  ? "Book your first service to start earning points! 🚗"
+                  : points < 500
+                  ? "Great start! Earn more points to unlock Silver perks. 🌟"
+                  : points < 1000
+                  ? "You're doing great! Almost at Gold status. 🚀"
+                  : points < 2500
+                  ? "Keep it up! You're on fire 🔥"
+                  : "Incredible! You've reached peak status. 👑"}
+              </div>
             </div>
             <div className="text-right">
               <div className="text-xs opacity-80">Available balance</div>
