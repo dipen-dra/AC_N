@@ -6,6 +6,8 @@ import {
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { logoutUser, type User } from "@/lib/auth-server";
+import { useState } from "react";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 const adminNav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -31,9 +33,10 @@ export function AdminShell({ children, kind = "admin" }: { children: ReactNode; 
   const { user } = useRouteContext({ from: "__root__" }) as { user?: User | null };
   const nav = kind === "admin" ? adminNav : superNav;
   const Icon = kind === "admin" ? Shield : ShieldCheck;
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
-  const handleSignOut = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleSignOut = async () => {
+    setIsLogoutConfirmOpen(false);
     try {
       const res = await logoutUser();
       if (res.success) {
@@ -79,7 +82,7 @@ export function AdminShell({ children, kind = "admin" }: { children: ReactNode; 
           <Link to="/admin/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent/60">
             <Settings className="h-4 w-4" /> Settings
           </Link>
-          <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60 text-left">
+          <button onClick={() => setIsLogoutConfirmOpen(true)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60 text-left cursor-pointer">
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
@@ -109,6 +112,18 @@ export function AdminShell({ children, kind = "admin" }: { children: ReactNode; 
         </header>
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+
+      <ConfirmationModal
+        isOpen={isLogoutConfirmOpen}
+        title="Sign Out"
+        description="Are you sure you want to log out from the administrative dashboard?"
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        onConfirm={handleSignOut}
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+        icon={LogOut}
+        variant="primary"
+      />
     </div>
   );
 }

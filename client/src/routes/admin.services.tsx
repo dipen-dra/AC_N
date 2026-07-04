@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { getServices } from "@/lib/db-server";
 import { createService, updateService, deleteService } from "@/lib/db-server";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/admin/services")({
   beforeLoad: ({ context }) => {
@@ -27,6 +28,7 @@ function AdminServices() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<any | null>(null);
 
   const handleOpenAdd = () => {
     setForm(emptyForm);
@@ -67,13 +69,21 @@ function AdminServices() {
     }
   };
 
-  const handleDelete = async (s: any) => {
-    if (!confirm(`Delete "${s.name}"?`)) return;
+  const handleDelete = (s: any) => {
+    setServiceToDelete(s);
+  };
+
+  const confirmDeleteService = async () => {
+    if (!serviceToDelete) return;
+    const s = serviceToDelete;
     const res = await deleteService(s.id);
     if (res.success) {
       setServices((prev) => prev.filter((x) => x.id !== s.id));
       toast.success(`"${s.name}" deleted.`);
-    } else toast.error(res.error || "Delete failed.");
+    } else {
+      toast.error(res.error || "Delete failed.");
+    }
+    setServiceToDelete(null);
   };
 
   return (
@@ -168,6 +178,18 @@ function AdminServices() {
           ))
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!serviceToDelete}
+        title="Delete Service"
+        description={`Are you sure you want to permanently delete the service "${serviceToDelete?.name}"? Customers will no longer be able to book this service.`}
+        confirmText="Delete Service"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteService}
+        onCancel={() => setServiceToDelete(null)}
+        icon={Trash2}
+        variant="danger"
+      />
     </AdminShell>
   );
 }

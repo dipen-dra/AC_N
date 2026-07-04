@@ -22,7 +22,7 @@ function TrackIndex() {
   const [searchId, setSearchId] = useState("");
 
   const activeBookings = allBookings.filter(
-    (b) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
+    (b:any) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
   );
 
   const handleTrack = (e: React.FormEvent) => {

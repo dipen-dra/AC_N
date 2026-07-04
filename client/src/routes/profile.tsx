@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { logoutUser, uploadAvatar } from "@/lib/auth-server";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/profile")({
   beforeLoad: ({ context }) => {
@@ -40,8 +41,12 @@ function Profile() {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [newPlate, setNewPlate] = useState("");
   const [newModel, setNewModel] = useState("");
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isDeleteVehicleConfirmOpen, setIsDeleteVehicleConfirmOpen] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
 
   const handleSignOut = async () => {
+    setIsLogoutConfirmOpen(false);
     try {
       const res = await logoutUser();
       if (res.success) {
@@ -54,6 +59,20 @@ function Profile() {
     } catch (err: any) {
       toast.error(err?.message || "An error occurred during logout.");
     }
+  };
+
+  const handleDeleteVehicleClick = (plate: string) => {
+    setVehicleToDelete(plate);
+    setIsDeleteVehicleConfirmOpen(true);
+  };
+
+  const confirmDeleteVehicle = () => {
+    if (vehicleToDelete) {
+      setVehicles(vehicles.filter((v) => v.n !== vehicleToDelete));
+      toast.success(`Vehicle ${vehicleToDelete} removed successfully.`);
+      setVehicleToDelete(null);
+    }
+    setIsDeleteVehicleConfirmOpen(false);
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,7 +155,7 @@ function Profile() {
             </button>
           ))}
           <button
-            onClick={handleSignOut}
+            onClick={() => setIsLogoutConfirmOpen(true)}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
           >
             <LogOut className="h-4 w-4" /> Sign Out
@@ -344,9 +363,9 @@ function Profile() {
                         </div>
                         <div className="text-xs text-muted-foreground">{v.m}</div>
                       </div>
-                      <button 
-                        onClick={() => handleDeleteVehicle(v.n)}
-                        className="text-muted-foreground hover:text-destructive cursor-pointer"
+                      <button
+                        onClick={() => handleDeleteVehicleClick(v.n)}
+                        className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -387,6 +406,30 @@ function Profile() {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={isLogoutConfirmOpen}
+        title="Sign Out"
+        description="Are you sure you want to log out of your account?"
+        confirmText="Sign Out"
+        cancelText="Cancel"
+        onConfirm={handleSignOut}
+        onCancel={() => setIsLogoutConfirmOpen(false)}
+        icon={LogOut}
+        variant="primary"
+      />
+
+      <ConfirmationModal
+        isOpen={isDeleteVehicleConfirmOpen}
+        title="Remove Vehicle"
+        description={`Are you sure you want to remove the vehicle "${vehicleToDelete}" from your garage?`}
+        confirmText="Remove"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteVehicle}
+        onCancel={() => setIsDeleteVehicleConfirmOpen(false)}
+        icon={Trash2}
+        variant="danger"
+      />
     </AppShell>
   );
 }

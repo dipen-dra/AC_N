@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AdminShell, StatCard } from "@/components/admin-shell";
 import { getAdminCustomers, updateCustomerStatus, deleteCustomer } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/admin/customers")({
   beforeLoad: ({ context }) => {
@@ -25,6 +26,9 @@ function AdminCustomers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  
+  const [customerToDelete, setCustomerToDelete] = useState<any | null>(null);
+  const [customerToToggle, setCustomerToToggle] = useState<any | null>(null);
 
   const filtered = customers.filter((c) => {
     const matchSearch =
@@ -38,7 +42,14 @@ function AdminCustomers() {
   const totalSpend = customers.reduce((s, c) => s + c.spend, 0);
   const activeCount = customers.filter((c) => c.status === "Active").length;
 
-  const handleToggleStatus = async (c: any) => {
+  const handleToggleStatus = (c: any) => {
+    setCustomerToToggle(c);
+    setOpenMenu(null);
+  };
+
+  const confirmToggleStatus = async () => {
+    if (!customerToToggle) return;
+    const c = customerToToggle;
     const newStatus = c.status === "Active" ? "Suspended" : "Active";
     const res = await updateCustomerStatus({ id: c.id, status: newStatus });
     if (res.success) {
@@ -47,11 +58,17 @@ function AdminCustomers() {
     } else {
       toast.error(res.error || "Failed to update status.");
     }
+    setCustomerToToggle(null);
+  };
+
+  const handleDelete = (c: any) => {
+    setCustomerToDelete(c);
     setOpenMenu(null);
   };
 
-  const handleDelete = async (c: any) => {
-    if (!confirm(`Permanently delete ${c.name}? This cannot be undone.`)) return;
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
+    const c = customerToDelete;
     const res = await deleteCustomer(c.id);
     if (res.success) {
       setCustomers((prev) => prev.filter((x) => x.id !== c.id));
@@ -59,7 +76,7 @@ function AdminCustomers() {
     } else {
       toast.error(res.error || "Failed to delete.");
     }
-    setOpenMenu(null);
+    setCustomerToDelete(null);
   };
 
   return (
@@ -168,6 +185,34 @@ function AdminCustomers() {
           </table>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!customerToDelete}
+        title="Delete Customer Account"
+        description={`Are you sure you want to permanently delete the account of ${customerToDelete?.name}? This action is irreversible.`}
+        confirmText="Delete Account"
+        cancelText="Cancel"
+        onConfirm={confirmDelete}
+        onCancel={() => setCustomerToDelete(null)}
+        icon={Trash2}
+        variant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={!!customerToToggle}
+        title={customerToToggle?.status === "Active" ? "Suspend Account" : "Activate Account"}
+        description={
+          customerToToggle?.status === "Active"
+            ? `Are you sure you want to suspend the account of ${customerToToggle?.name}? They will lose access to system actions.`
+            : `Are you sure you want to reactivate the account of ${customerToToggle?.name}?`
+        }
+        confirmText={customerToToggle?.status === "Active" ? "Suspend" : "Activate"}
+        cancelText="Cancel"
+        onConfirm={confirmToggleStatus}
+        onCancel={() => setCustomerToToggle(null)}
+        icon={Shield}
+        variant={customerToToggle?.status === "Active" ? "danger" : "primary"}
+      />
     </AdminShell>
   );
 }
