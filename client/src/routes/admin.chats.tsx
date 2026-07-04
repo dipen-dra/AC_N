@@ -1,10 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Bot, MessageSquare, Search, Send, RefreshCw, Trash2 } from "lucide-react";
+import { Bot, MessageSquare, Search, Send, RefreshCw, Trash2, Smile, Paperclip } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { getChatMessages, sendChatMessage, markChatAsRead, clearChatMessages } from "@/lib/db-server";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/chats")({
   beforeLoad: ({ context }) => {
@@ -24,8 +25,12 @@ function AdminChats() {
   const [sending, setSending] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
+  
+  const emojis = ["😊", "👍", "🚗", "🔧", "🔥", "❤️", "🎉", "👋", "✅", "👀", "🛠️", "💬"];
 
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -97,6 +102,49 @@ function AdminChats() {
       }
     }
   }, [activeEmail, messages.length]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeEmail) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File is too large. Maximum size is 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target?.result as string;
+      setSending(true);
+      try {
+        const res = await sendChatMessage({
+          data: {
+            text: base64Data,
+            recipientEmail: activeEmail
+          }
+        });
+        if (res.success || res.message) {
+          const newMsg = res.message || {
+            userEmail: activeEmail,
+            senderEmail: user?.email || "admin@autocare.com",
+            senderName: user?.name || "Support",
+            senderRole: "Admin",
+            text: base64Data,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            read: false
+          };
+          setMessages((prev) => [...prev, newMsg]);
+        } else {
+          toast.error("Failed to send file.");
+        }
+      } catch (err) {
+        toast.error("Failed to upload file.");
+      } finally {
+        setSending(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleClearChat = async () => {
     if (!activeEmail) return;
@@ -247,18 +295,62 @@ function AdminChats() {
                   const isAdmin = m.senderRole === "Admin";
                   return (
                     <div key={m._id || i} className={`flex items-end gap-2 ${isAdmin ? "flex-row-reverse" : ""}`}>
-                      {!isAdmin && <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-xs font-bold text-muted-foreground">{m.senderName?.[0]?.toUpperCase() || "C"}</div>}
+                      {!isAdmin && <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-xs font-bold text-muted-foreground">{m.senderEmail?.[0]?.toUpperCase() || "C"}</div>}
                       <div className={`max-w-md rounded-2xl px-4 py-2.5 text-sm ${isAdmin ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-secondary"}`}>
-                        {m.text}
+                        {m.text.startsWith("data:") ? (
+                          m.text.startsWith("data:image/") ? (
+                            <img src={m.text} alt="Uploaded attachment" className="max-w-[240px] max-h-[200px] rounded-lg object-cover" />
+                          ) : (
+                            <a href={m.text} download="attachment" className={cn(isAdmin ? "text-white underline" : "text-primary underline", "flex items-center gap-1")}>Download attachment</a>
+                          )
+                        ) : (
+                          m.text
+                        )}
                       </div>
                     </div>
                   );
                 })}
                 <div ref={bottomRef} />
               </div>
-              <div className="border-t border-border p-4">
+              <div className="border-t border-border p-4 relative">
+                {showEmojis && (
+                  <div className="absolute bottom-20 left-4 z-20 grid grid-cols-6 gap-2 rounded-xl border border-border bg-card p-3 shadow-lg max-w-[240px]">
+                    {emojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          setReply((r) => r + emoji);
+                          setShowEmojis(false);
+                        }}
+                        className="text-lg hover:scale-125 transition-transform cursor-pointer"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                />
                 <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojis((prev) => !prev)}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <Smile className="h-4 w-4" />
+                  </button>
                   <input
                     value={reply}
                     onChange={(e) => setReply(e.target.value)}

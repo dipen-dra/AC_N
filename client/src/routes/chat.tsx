@@ -25,7 +25,11 @@ function Chat() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [showEmojis, setShowEmojis] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const emojis = ["😊", "👍", "🚗", "🔧", "🔥", "❤️", "🎉", "👋", "✅", "👀", "🛠️", "💬"];
 
   useEffect(() => {
     setMsgs(initialMessages || []);
@@ -82,6 +86,39 @@ function Chat() {
     } catch {
       toast.error("An error occurred.");
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File is too large. Maximum size is 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target?.result as string;
+      setSending(true);
+      try {
+        const res = await sendChatMessage({ data: { text: base64Data } });
+        if (res.success || res.message) {
+          const newMsg = res.message || {
+            senderRole: "Customer",
+            text: base64Data,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            read: false
+          };
+          setMsgs((prev) => [...prev, newMsg]);
+        }
+      } catch (err) {
+        toast.error("Failed to upload file.");
+      } finally {
+        setSending(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const send = async () => {
@@ -182,7 +219,15 @@ function Chat() {
                         "max-w-md rounded-2xl px-4 py-2.5 text-sm",
                         isUser ? "rounded-br-sm bg-primary-soft text-foreground" : "rounded-bl-sm bg-secondary"
                       )}>
-                        <div>{m.text}</div>
+                        {m.text.startsWith("data:") ? (
+                          m.text.startsWith("data:image/") ? (
+                            <img src={m.text} alt="Uploaded attachment" className="max-w-[240px] max-h-[200px] rounded-lg object-cover" />
+                          ) : (
+                            <a href={m.text} download="attachment" className="text-primary underline flex items-center gap-1">Download attachment</a>
+                          )
+                        ) : (
+                          <div>{m.text}</div>
+                        )}
                         <div className={cn("mt-1 flex items-center gap-1 text-[10px] text-muted-foreground", isUser && "justify-end")}>
                           {m.time} {isUser && <CheckCheck className={cn("h-3.5 w-3.5", m.read ? "text-primary font-extrabold" : "text-muted-foreground")} />}
                         </div>
@@ -194,10 +239,45 @@ function Chat() {
               <div ref={scrollRef} />
             </div>
 
-            <div className="border-t border-border p-4">
+            <div className="border-t border-border p-4 relative">
+              {showEmojis && (
+                <div className="absolute bottom-20 left-4 z-20 grid grid-cols-6 gap-2 rounded-xl border border-border bg-card p-3 shadow-lg max-w-[240px]">
+                  {emojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => {
+                        setText((t) => t + emoji);
+                        setShowEmojis(false);
+                      }}
+                      className="text-lg hover:scale-125 transition-transform cursor-pointer"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              />
               <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2">
-                <button className="text-muted-foreground hover:text-foreground"><Paperclip className="h-4 w-4" /></button>
-                <button className="text-muted-foreground hover:text-foreground"><Smile className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojis((prev) => !prev)}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <Smile className="h-4 w-4" />
+                </button>
                 <input 
                   value={text} 
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value)} 
@@ -205,7 +285,7 @@ function Chat() {
                   placeholder="Type your message..." 
                   className="flex-1 bg-transparent py-2 text-sm outline-none" 
                 />
-                <button onClick={send} className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"><Send className="h-4 w-4" /></button>
+                <button onClick={send} className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"><Send className="h-4 w-4" /></button>
               </div>
             </div>
           </section>
