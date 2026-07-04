@@ -1,16 +1,14 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Service = require("../models/Service");
-const Booking = require("../models/Booking");
-const AuditLog = require("../models/AuditLog");
 
 async function seedDatabase() {
   try {
-    // 1. Seed Services
+    // 1. Seed Services (Essential for catalog booking)
     const serviceCount = await Service.countDocuments();
     if (serviceCount === 0) {
-      console.log("Seeding mock services in MongoDB...");
-      const mockServices = [
+      console.log("Seeding core services in MongoDB...");
+      const coreServices = [
         {
           id: "S-1",
           name: "Super Wash",
@@ -72,22 +70,22 @@ async function seedDatabase() {
           features: ["3D Alignment", "Camber Adjustments", "Tire Rotation", "Pressure Check"]
         }
       ];
-      await Service.insertMany(mockServices);
+      await Service.insertMany(coreServices);
     }
 
-    // 2. Seed Users
-    const userCount = await User.countDocuments();
-    if (userCount === 0) {
-      console.log("Seeding mock users in MongoDB...");
-      const mockUsers = [
+    // 2. Seed Administrative Users (Required for dashboard verification)
+    const adminCount = await User.countDocuments({ role: { $in: ["Admin", "Superadmin", "SuperAdmin"] } });
+    if (adminCount === 0) {
+      console.log("Seeding core administrative accounts in MongoDB...");
+      const coreAdmins = [
         {
           id: "U-1",
           name: "Admin User",
           email: "admin@autocare.com",
           phone: "9801234567",
           passwordHash: bcrypt.hashSync("password123", 10),
-          points: 1200,
-          tier: "Gold",
+          points: 0,
+          tier: "Bronze",
           initial: "A",
           status: "Active",
           role: "Admin"
@@ -98,86 +96,19 @@ async function seedDatabase() {
           email: "super@autocare.com",
           phone: "9807654321",
           passwordHash: bcrypt.hashSync("password123", 10),
-          points: 3000,
-          tier: "Platinum",
+          points: 0,
+          tier: "Bronze",
           initial: "S",
           status: "Active",
           role: "Superadmin"
-        },
-        {
-          id: "U-3",
-          name: "Ram Kumar",
-          email: "user@autocare.com",
-          phone: "9841234567",
-          passwordHash: bcrypt.hashSync("password123", 10),
-          points: 450,
-          tier: "Bronze",
-          initial: "R",
-          status: "Active",
-          role: "Customer"
         }
       ];
-      await User.insertMany(mockUsers);
+      await User.insertMany(coreAdmins);
     }
 
-    // 3. Seed Bookings
-    const bookingCount = await Booking.countDocuments();
-    if (bookingCount === 0) {
-      console.log("Seeding mock bookings in MongoDB...");
-      const mockBookings = [
-        {
-          id: "AC-2026-0515-000123",
-          customer: "Ram Kumar",
-          customerEmail: "user@autocare.com",
-          service: "Full Servicing",
-          vehicle: "Toyota Yaris (BA 2 PA 5512)",
-          date: "15 May, 2026",
-          time: "10:00 AM",
-          location: "Lalitpur, Nepal",
-          price: 9500,
-          status: "In Progress",
-          technician: "Ramesh KC",
-          eta: "03:30 PM - 04:00 PM"
-        },
-        {
-          id: "AC-2026-0501-000098",
-          customer: "Ram Kumar",
-          customerEmail: "user@autocare.com",
-          service: "Super Wash",
-          vehicle: "Yamaha FZ (BA 92 PA 1120)",
-          date: "01 May, 2026",
-          time: "02:00 PM",
-          location: "Kathmandu, Nepal",
-          price: 1200,
-          status: "Completed",
-          technician: "Anil Thapa",
-          eta: ""
-        }
-      ];
-      await Booking.insertMany(mockBookings);
-    }
-
-    // 4. Seed Audit Logs
-    const logCount = await AuditLog.countDocuments();
-    if (logCount === 0) {
-      console.log("Seeding mock audit logs in MongoDB...");
-      const mockLogs = [
-        {
-          id: "L-101",
-          userEmail: "super@autocare.com",
-          action: "Initialize database schema",
-          entity: "System Setup",
-          ip: "127.0.0.1",
-          time: new Date().toLocaleString(),
-          severity: "info"
-        }
-      ];
-      await AuditLog.insertMany(mockLogs);
-    }
-
-    console.log("MongoDB seeded successfully.");
+    console.log("Core seed logic check completed.");
   } catch (err) {
-    console.error("Database seeding failed:", err);
+    console.error("Database seed check failed:", err);
   }
 }
 

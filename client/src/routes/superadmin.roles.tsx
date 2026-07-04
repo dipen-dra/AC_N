@@ -3,7 +3,6 @@ import { Check, KeyRound, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { roles } from "@/lib/mock";
 import { getAdminCustomers, updateCustomerRole } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/roles")({
@@ -30,6 +29,19 @@ function Roles() {
   const [customers, setCustomers] = useState<any[]>(initial);
   const [updating, setUpdating] = useState<string | null>(null);
 
+  const rolesMeta = [
+    { name: "Superadmin", perms: 42, desc: "Full control including role management and audit logs" },
+    { name: "Admin", perms: 28, desc: "Manage services, bookings, customers and chats" },
+    { name: "Customer", perms: 8, desc: "Book, pay, track and review" },
+  ];
+
+  const getRoleUserCount = (roleName: string) => {
+    return customers.filter((c) => {
+      const userRole = c.role || "Customer";
+      return userRole.toLowerCase() === roleName.toLowerCase();
+    }).length;
+  };
+
   const handleRoleChange = async (id: string, role: string) => {
     setUpdating(id);
     const res = await updateCustomerRole({ id, role });
@@ -53,13 +65,13 @@ function Roles() {
         <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"><Plus className="h-4 w-4" /> Create role</button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {roles.map((r) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {rolesMeta.map((r) => (
           <div key={r.name} className="rounded-2xl border border-border bg-card p-5">
             <div className="flex items-center gap-2"><KeyRound className="h-5 w-5 text-primary" /><div className="font-bold">{r.name}</div></div>
             <div className="mt-1 text-xs text-muted-foreground">{r.desc}</div>
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <div><div className="text-xs text-muted-foreground">Users</div><div className="font-bold">{r.users}</div></div>
+              <div><div className="text-xs text-muted-foreground">Users</div><div className="font-bold">{getRoleUserCount(r.name)}</div></div>
               <div><div className="text-xs text-muted-foreground">Permissions</div><div className="font-bold">{r.perms}</div></div>
             </div>
           </div>
@@ -74,16 +86,16 @@ function Roles() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/40 text-xs uppercase text-muted-foreground">
-              <tr><th className="px-4 py-3 text-left font-semibold">Permission</th>{roles.map((r) => <th key={r.name} className="px-4 py-3 text-center font-semibold">{r.name}</th>)}</tr>
+              <tr><th className="px-4 py-3 text-left font-semibold">Permission</th>{rolesMeta.map((r) => <th key={r.name} className="px-4 py-3 text-center font-semibold">{r.name}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-border">
               {permissions.map((group) => (
                 <>
-                  <tr key={group.g} className="bg-secondary/30"><td colSpan={roles.length + 1} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group.g}</td></tr>
+                  <tr key={group.g} className="bg-secondary/30"><td colSpan={rolesMeta.length + 1} className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">{group.g}</td></tr>
                   {group.p.map((p) => (
                     <tr key={p}>
                       <td className="px-4 py-3">{p}</td>
-                      {roles.map((r, i) => {
+                      {rolesMeta.map((r, i) => {
                         const enabled = i === 0 || (i === 1 && !p.includes("Delete")) || (i === 2 && p.includes("View"));
                         return <td key={r.name} className="px-4 py-3 text-center">
                           {enabled ? <span className="mx-auto grid h-6 w-6 place-items-center rounded-full bg-success/15 text-success"><Check className="h-3.5 w-3.5" /></span> : <span className="text-muted-foreground">—</span>}

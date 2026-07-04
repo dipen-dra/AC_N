@@ -1,10 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AdminShell, StatCard } from "@/components/admin-shell";
-import { revenueData, serviceMix } from "@/lib/mock";
 import { DollarSign, Star, TrendingUp, Users } from "lucide-react";
+import { getAdminAnalytics } from "@/lib/db-server";
 
 export const Route = createFileRoute("/admin/analytics")({
+  beforeLoad: ({ context }) => {
+    if (!context.user || (context.user.role !== "Admin" && context.user.role !== "Superadmin")) {
+      throw redirect({ to: "/login" });
+    }
+  },
+  loader: () => getAdminAnalytics(),
   head: () => ({ meta: [{ title: "Analytics — Admin" }] }),
   component: Analytics,
 });
@@ -12,6 +18,11 @@ export const Route = createFileRoute("/admin/analytics")({
 const COLORS = ["#e11d48", "#0891b2", "#22c55e", "#f59e0b", "#8b5cf6", "#64748b"];
 
 function Analytics() {
+  const data = Route.useLoaderData();
+  const summary = data?.summary || { completedRevenue: 0, totalBookings: 0, customerCount: 0 };
+  const rData = data?.revenueData || [];
+  const sMix = data?.serviceMix || [];
+
   return (
     <AdminShell>
       <div className="mb-6">
@@ -19,9 +30,9 @@ function Analytics() {
         <p className="text-sm text-muted-foreground">Deep dive into performance, revenue and customer insights.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Gross revenue" value="Rs. 26.3L" delta="14.2%" icon={DollarSign} tone="success" />
-        <StatCard label="Avg. ticket size" value="Rs. 3,820" delta="4.6%" icon={TrendingUp} tone="primary" />
-        <StatCard label="New customers" value="+284" delta="12.9%" icon={Users} tone="info" />
+        <StatCard label="Gross revenue" value={`Rs. ${summary.completedRevenue.toLocaleString()}`} delta="14.2%" icon={DollarSign} tone="success" />
+        <StatCard label="Total bookings" value={summary.totalBookings.toString()} delta="4.6%" icon={TrendingUp} tone="primary" />
+        <StatCard label="Total customers" value={summary.customerCount.toString()} delta="12.9%" icon={Users} tone="info" />
         <StatCard label="Avg. rating" value="4.8/5" delta="0.2" icon={Star} tone="warning" />
       </div>
 
@@ -30,7 +41,7 @@ function Analytics() {
           <div className="text-lg font-bold">Revenue over time</div>
           <div className="mt-4 h-72">
             <ResponsiveContainer>
-              <AreaChart data={revenueData}>
+              <AreaChart data={rData}>
                 <defs>
                   <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#e11d48" stopOpacity={0.4} />
@@ -51,8 +62,8 @@ function Analytics() {
           <div className="mt-4 h-72">
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={serviceMix} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
-                  {serviceMix.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                <Pie data={sMix} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
+                  {sMix.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
                 <Legend />
@@ -67,7 +78,7 @@ function Analytics() {
           <div className="text-lg font-bold">Bookings by day</div>
           <div className="mt-4 h-64">
             <ResponsiveContainer>
-              <BarChart data={revenueData}>
+              <BarChart data={rData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis dataKey="month" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
                 <Bar dataKey="bookings" fill="#0891b2" radius={[8, 8, 0, 0]} />

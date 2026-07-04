@@ -180,5 +180,38 @@ router.post("/contact", async (req, res) => {
   }
 });
 
+// ─── WORKSHOP DETAILS ───────────────────────────────────────────────────────
+const Workshop = require("../models/Workshop");
+
+router.get("/workshop", requireAuth, async (req, res) => {
+  try {
+    let ws = await Workshop.findOne({});
+    if (!ws) {
+      ws = new Workshop({});
+      await ws.save();
+    }
+    res.json(ws);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load workshop details." });
+  }
+});
+
+router.patch("/workshop", requireAuth, requireRole(["Admin", "Superadmin"]), async (req, res) => {
+  try {
+    let ws = await Workshop.findOne({});
+    if (!ws) ws = new Workshop({});
+    
+    const fields = ["name", "registrationNo", "owner", "manager", "phone", "email", "address", "city", "workingHours", "team", "baysCount"];
+    fields.forEach((f) => {
+      if (req.body[f] !== undefined) ws[f] = req.body[f];
+    });
+    
+    await ws.save();
+    res.json({ success: true, workshop: ws });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update workshop details." });
+  }
+});
+
 module.exports = router;
 

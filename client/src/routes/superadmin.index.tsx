@@ -2,8 +2,8 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Activity, AlertTriangle, FileText, KeyRound, ShieldCheck, Users } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AdminShell, StatCard } from "@/components/admin-shell";
-import { auditLogs } from "@/lib/mock";
 import { cn } from "@/lib/utils";
+import { getAuditLogs } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/")({
   beforeLoad: ({ context }) => {
@@ -11,6 +11,7 @@ export const Route = createFileRoute("/superadmin/")({
       throw redirect({ to: "/login" });
     }
   },
+  loader: () => getAuditLogs(),
   head: () => ({ meta: [{ title: "Superadmin — AutoCare Nepal" }] }),
   component: Super,
 });
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/superadmin/")({
 const traffic = Array.from({ length: 12 }).map((_, i) => ({ h: `${i * 2}h`, requests: Math.round(400 + Math.random() * 800), threats: Math.round(Math.random() * 40) }));
 
 function Super() {
+  const logs = Route.useLoaderData() || [];
   return (
     <AdminShell kind="super">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -61,13 +63,13 @@ function Super() {
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="flex items-center gap-2 text-lg font-bold"><Activity className="h-5 w-5 text-primary" /> Live audit feed</div>
           <div className="mt-4 space-y-3">
-            {auditLogs.slice(0, 5).map((l) => (
+            {logs.slice(0, 5).map((l: any) => (
               <div key={l.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
                 <div className={cn("mt-1 h-2 w-2 rounded-full",
                   l.severity === "critical" ? "bg-destructive" : l.severity === "warn" ? "bg-warning" : "bg-info")} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{l.action}</div>
-                  <div className="truncate text-xs text-muted-foreground">{l.user} · {l.entity}</div>
+                  <div className="truncate text-xs text-muted-foreground">{l.user || l.userEmail || "system"} · {l.entity}</div>
                 </div>
                 <div className="text-[10px] text-muted-foreground">{l.time}</div>
               </div>

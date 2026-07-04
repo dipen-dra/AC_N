@@ -3,9 +3,16 @@ import { ArrowRight, Calendar, ChevronDown, Headphones, Mail, MessageCircle, Pho
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { faqs } from "@/lib/mock";
 import { submitContact } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
+
+const faqs = [
+  { q: "How do I book a service?", a: "Head to Book Service, select your vehicle, choose a service, and pick a date and time. Confirm and pay online or opt for cash." },
+  { q: "How can I track my service?", a: "Every booking has a Track Service link that shows live status from booking to completion." },
+  { q: "What payment methods do you accept?", a: "We accept eSewa, Khalti, all major cards, and cash on delivery at pickup." },
+  { q: "How can I reschedule my booking?", a: "Open the booking from My Bookings and use the reschedule action, or chat with support." },
+  { q: "Do you offer pickup and drop service?", a: "Yes, we offer free pickup and drop within the Kathmandu valley for all bookings." },
+];
 
 export const Route = createFileRoute("/contact")({
   head: () => ({ meta: [{ title: "Contact Us — AutoCare Nepal" }] }),

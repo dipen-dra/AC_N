@@ -269,3 +269,30 @@ export const resetPassword = async (data: { email: string; token: string; passwo
     return { success: false, error: "Reset failed." };
   }
 };
+
+// 21. Get Workshop Details (Client API Fetcher)
+export const getWorkshopDetails = async () => {
+  try {
+    const response = await fetch("/api/admin/workshop");
+    if (!response.ok) throw new Error("Failed to fetch workshop");
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getWorkshopDetails:", error);
+    return null;
+  }
+};
+
+// 22. Update Workshop Details (Client API Fetcher)
+export const updateWorkshopDetails = async (data: any) => {
+  try {
+    const response = await fetch("/api/admin/workshop", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error in updateWorkshopDetails:", error);
+    return { success: false, error: "Update failed." };
+  }
+};
