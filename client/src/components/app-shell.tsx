@@ -44,7 +44,7 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <BrandLogo />
+        <BrandLogo className="shrink-0" />
         <nav className="hidden items-center gap-1 lg:flex">
           {nav.map((n) => {
             const active = n.to === "/" ? pathname === "/" : (pathname === n.to || pathname.startsWith(n.to + "/"));
@@ -62,8 +62,8 @@ export function AppHeader() {
             );
           })}
         </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-accent">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button className="relative grid h-10 w-10 place-items-center rounded-full border border-border hover:bg-accent shrink-0">
             <Bell className="h-4 w-4" />
             {notifCount !== null && notifCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 grid h-5 w-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
@@ -72,11 +72,11 @@ export function AppHeader() {
             )}
           </button>
           {user ? (
-            <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border py-1.5 pl-1.5 pr-3 hover:bg-accent">
+            <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border py-1.5 pl-1.5 pr-3 hover:bg-accent shrink-0">
               {user.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-7 w-7 rounded-full object-cover" />
+                <img src={user.avatar} alt={user.name} className="h-7 w-7 rounded-full object-cover shrink-0" />
               ) : (
-                <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-xs font-bold text-background">
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-xs font-bold text-background shrink-0">
                   {user.initial}
                 </span>
               )}
@@ -84,12 +84,12 @@ export function AppHeader() {
               <ChevronDown className="hidden h-3.5 w-3.5 text-muted-foreground sm:inline" />
             </Link>
           ) : (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <Link to="/login" className="rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-accent">Login</Link>
               <Link to="/register" className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">Sign Up</Link>
             </div>
           )}
-          <button className="grid h-10 w-10 place-items-center rounded-lg border border-border lg:hidden" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <button className="grid h-10 w-10 place-items-center rounded-lg border border-border lg:hidden shrink-0" onClick={() => setOpen((v) => !v)} aria-label="Menu">
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
