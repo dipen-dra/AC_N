@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Award, Clock, PlayCircle, Shield, ShieldCheck, Sparkles, Star, Truck, Wrench, Droplet, Disc, Cog, Snowflake, Headphones, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Award, Clock, PlayCircle, Shield, ShieldCheck, Sparkles, Star, Truck, Wrench, Droplet, Disc, Cog, Snowflake, Headphones, CheckCircle2, Calendar } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { getServices } from "@/lib/db-server";
 import heroCar from "@/assets/hero-car.jpg";
@@ -118,21 +118,24 @@ function Home() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* How it Works / Workflow */}
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-        <div className="grid gap-6 rounded-3xl border border-border bg-card p-8 sm:grid-cols-4">
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="text-xs font-semibold uppercase tracking-wider text-primary">Simple & Seamless</div>
+          <h2 className="mt-1 text-3xl font-extrabold sm:text-4xl">How AutoCare Works</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Three simple steps to professional vehicle maintenance at your doorstep.</p>
+        </div>
+        <div className="grid gap-8 md:grid-cols-3">
           {[
-            { v: "10K+", l: "Happy Customers", tone: "bg-primary-soft text-primary" },
-            { v: "50K+", l: "Services Completed", tone: "bg-success/15 text-success" },
-            { v: "4.8", l: "Average Rating", tone: "bg-warning/20 text-warning-foreground" },
-            { v: "100%", l: "Satisfaction Guarantee", tone: "bg-info/15 text-info" },
-          ].map((s) => (
-            <div key={s.l} className="flex items-center gap-4">
-              <div className={`grid h-14 w-14 place-items-center rounded-2xl ${s.tone}`}><CheckCircle2 className="h-7 w-7" /></div>
-              <div>
-                <div className="text-3xl font-extrabold">{s.v}</div>
-                <div className="text-sm text-muted-foreground">{s.l}</div>
-              </div>
+            { step: "01", icon: Calendar, title: "Book in 60 seconds", desc: "Select services, choose a convenient date & time, and specify pickup location." },
+            { step: "02", icon: Wrench, title: "Professional service", desc: "Our driver picks up your car. Certified technicians execute the checklist at our bay." },
+            { step: "03", icon: Truck, title: "Live track & return", desc: "Monitor live status updates in real-time, pay securely online, and get your clean car delivered." }
+          ].map((w) => (
+            <div key={w.step} className="relative rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/20 hover:shadow-soft transition-all duration-200">
+              <div className="absolute top-4 right-4 text-4xl font-black text-primary/10 tracking-wider font-display">{w.step}</div>
+              <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary"><w.icon className="h-6 w-6" /></div>
+              <h3 className="mt-5 text-lg font-bold text-foreground">{w.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{w.desc}</p>
             </div>
           ))}
         </div>
