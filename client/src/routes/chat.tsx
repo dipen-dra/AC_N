@@ -35,9 +35,12 @@ function Chat() {
     setMsgs(initialMessages || []);
   }, [initialMessages]);
 
-  // Scroll to bottom on load or new messages
+  // Scroll to bottom on load or new messages (with a slight timeout for rendering layout calculation)
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [msgs]);
 
   // Real-time polling: refetch messages every 3 seconds

@@ -67,9 +67,12 @@ function AdminChats() {
     return () => clearInterval(interval);
   }, []);
 
-  // Scroll to bottom on thread change or new messages
+  // Scroll to bottom on thread change or new messages (with a slight rendering timeout)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const timer = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [activeEmail, messages.length]);
 
   // Group messages by unique customer userEmail
