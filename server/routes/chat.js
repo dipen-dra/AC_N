@@ -109,4 +109,23 @@ router.patch("/read", requireAuth, async (req, res) => {
   }
 });
 
+// 4. CLEAR CHAT HISTORY
+router.delete("/", requireAuth, async (req, res) => {
+  try {
+    let query = {};
+    if (req.user.role === "Admin" || req.user.role === "Superadmin") {
+      const { userEmail } = req.body;
+      if (!userEmail) return res.status(400).json({ error: "userEmail is required." });
+      query = { userEmail };
+    } else {
+      query = { userEmail: req.user.email };
+    }
+
+    await ChatMessage.deleteMany(query);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to clear chat history." });
+  }
+});
+
 module.exports = router;

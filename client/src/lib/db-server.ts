@@ -107,6 +107,21 @@ export const markChatAsRead = async (data?: { userEmail: string }) => {
   }
 };
 
+// 7.6. Clear Chat Messages (Client API Fetcher)
+export const clearChatMessages = async (data?: { userEmail: string }) => {
+  try {
+    const response = await fetch("/api/chat", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data || {}),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error in clearChatMessages:", error);
+    return { success: false, error: "Failed to clear chat." };
+  }
+};
+
 // 8. Get Audit Logs (Client API Fetcher)
 export const getAuditLogs = async () => {
   try {

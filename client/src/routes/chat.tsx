@@ -1,9 +1,11 @@
 import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Bot, CheckCheck, Paperclip, Send, Smile, SlidersHorizontal, MessageSquare } from "lucide-react";
+import { ArrowLeft, Bot, CheckCheck, Paperclip, Send, Smile, SlidersHorizontal, MessageSquare, Trash2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { AppShell } from "@/components/app-shell";
-import { getChatMessages, sendChatMessage, markChatAsRead } from "@/lib/db-server";
+import { getChatMessages, sendChatMessage, markChatAsRead, clearChatMessages } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
+import { ConfirmationModal } from "@/components/confirmation-modal";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/chat")({
   beforeLoad: ({ context }: { context: any }) => {
@@ -22,6 +24,7 @@ function Chat() {
   const [msgs, setMsgs] = useState<any[]>(initialMessages || []);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +68,21 @@ function Chat() {
       });
     }
   }, [msgs]);
+
+  const handleClearChat = async () => {
+    setIsClearConfirmOpen(false);
+    try {
+      const res = await clearChatMessages();
+      if (res.success) {
+        setMsgs([]);
+        toast.success("Chat history cleared successfully.");
+      } else {
+        toast.error(res.error || "Failed to clear chat history.");
+      }
+    } catch {
+      toast.error("An error occurred.");
+    }
+  };
 
   const send = async () => {
     if (!text.trim() || sending) return;
@@ -136,7 +154,16 @@ function Chat() {
                   <div className="text-xs text-muted-foreground">Ask us anything, our support representatives typically reply in minutes.</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success" /> Connected</div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-success animate-pulse" /> Connected</div>
+                <button
+                  onClick={() => setIsClearConfirmOpen(true)}
+                  className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                  title="Clear chat history"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </header>
 
             <div className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
@@ -184,6 +211,17 @@ function Chat() {
           </section>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={isClearConfirmOpen}
+        title="Clear Chat History"
+        description="Are you sure you want to permanently delete all messages in this conversation? This action cannot be undone."
+        confirmText="Clear Chat"
+        cancelText="Cancel"
+        onConfirm={handleClearChat}
+        onCancel={() => setIsClearConfirmOpen(false)}
+        icon={Trash2}
+        variant="danger"
+      />
     </AppShell>
   );
 }

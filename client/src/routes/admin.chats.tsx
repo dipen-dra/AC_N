@@ -1,9 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Bot, MessageSquare, Search, Send, RefreshCw } from "lucide-react";
+import { Bot, MessageSquare, Search, Send, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { getChatMessages, sendChatMessage, markChatAsRead } from "@/lib/db-server";
+import { getChatMessages, sendChatMessage, markChatAsRead, clearChatMessages } from "@/lib/db-server";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/admin/chats")({
   beforeLoad: ({ context }) => {
@@ -24,6 +25,7 @@ function AdminChats() {
   const [searchQ, setSearchQ] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -95,6 +97,22 @@ function AdminChats() {
       }
     }
   }, [activeEmail, messages.length]);
+
+  const handleClearChat = async () => {
+    if (!activeEmail) return;
+    setIsClearConfirmOpen(false);
+    try {
+      const res = await clearChatMessages({ userEmail: activeEmail });
+      if (res.success) {
+        setMessages((prev) => prev.filter((m) => m.userEmail !== activeEmail));
+        toast.success(`Chat history with ${activeEmail} cleared.`);
+      } else {
+        toast.error(res.error || "Failed to clear chat history.");
+      }
+    } catch {
+      toast.error("An error occurred.");
+    }
+  };
 
   const threadMsgs = messages.filter((m: any) => m.userEmail === activeEmail);
   const filteredEmails = userEmails.filter((e) => e.toLowerCase().includes(searchQ.toLowerCase()));
@@ -216,6 +234,13 @@ function AdminChats() {
                     <div className="text-xs text-success">● Live conversation</div>
                   </div>
                 </div>
+                <button
+                  onClick={() => setIsClearConfirmOpen(true)}
+                  className="rounded-lg border border-border p-2 text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                  title="Clear conversation history"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </header>
               <div className="flex-1 space-y-4 overflow-y-auto p-6">
                 {threadMsgs.map((m: any, i: number) => {
@@ -254,6 +279,17 @@ function AdminChats() {
           )}
         </section>
       </div>
+      <ConfirmationModal
+        isOpen={isClearConfirmOpen}
+        title="Clear Conversation History"
+        description={`Are you sure you want to permanently delete all message history with customer "${activeEmail}"? This action is irreversible.`}
+        confirmText="Clear History"
+        cancelText="Cancel"
+        onConfirm={handleClearChat}
+        onCancel={() => setIsClearConfirmOpen(false)}
+        icon={Trash2}
+        variant="danger"
+      />
     </AdminShell>
   );
 }
