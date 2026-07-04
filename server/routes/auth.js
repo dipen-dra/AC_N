@@ -14,11 +14,11 @@ const SecurityMonitor = require('../middleware/security');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'autocare_secret_key_123456';
 
-// ========== STRICT AUTH RATE LIMIT (10s window in dev or 15min in prod) ==========
+// ========== STRICT AUTH RATE LIMIT (10s window) ==========
 const authLimiter = rateLimit({
-  windowMs: process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 10 * 1000,
+  windowMs: 10 * 1000,
   max: 10,
-  message: { success: false, error: 'Too many attempts. Please try again later.' },
+  message: { success: false, error: 'Too many attempts. Please try again in 10 seconds.' },
   standardHeaders: true,
   legacyHeaders: false
 });

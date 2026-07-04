@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 
 const connectDB = require("./config/db");
@@ -55,16 +54,6 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 };
 app.use(cors(corsOptions));
-
-// ========== GLOBAL RATE LIMITING ==========
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { error: 'Too many requests, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api', limiter);
 
 // ========== BODY PARSERS & COOKIES ==========
 app.use(express.json({ limit: '10mb' }));
