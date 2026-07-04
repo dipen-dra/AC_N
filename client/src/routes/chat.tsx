@@ -38,7 +38,9 @@ function Chat() {
   // Scroll to bottom on load or new messages (with a slight timeout for rendering layout calculation)
   useEffect(() => {
     const timer = setTimeout(() => {
-      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [msgs]);
@@ -206,7 +208,7 @@ function Chat() {
               </div>
             </header>
 
-            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
+            <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
               <div className="text-center text-xs text-muted-foreground mb-4">Today</div>
               {msgs.length === 0 ? (
                 <div className="text-center text-sm text-muted-foreground py-8">
@@ -239,7 +241,6 @@ function Chat() {
                   );
                 })
               )}
-              <div ref={scrollRef} />
             </div>
 
             <div className="border-t border-border p-4 relative">

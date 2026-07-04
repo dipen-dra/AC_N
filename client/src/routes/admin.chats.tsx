@@ -70,7 +70,9 @@ function AdminChats() {
   // Scroll to bottom on thread change or new messages (with a slight rendering timeout)
   useEffect(() => {
     const timer = setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (bottomRef.current) {
+        bottomRef.current.scrollTop = bottomRef.current.scrollHeight;
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [activeEmail, messages.length]);
@@ -293,7 +295,7 @@ function AdminChats() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </header>
-              <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              <div ref={bottomRef} className="flex-1 space-y-4 overflow-y-auto p-6">
                 {threadMsgs.map((m: any, i: number) => {
                   const isAdmin = m.senderRole === "Admin";
                   return (
@@ -313,7 +315,6 @@ function AdminChats() {
                     </div>
                   );
                 })}
-                <div ref={bottomRef} />
               </div>
               <div className="border-t border-border p-4 relative">
                 {showEmojis && (
