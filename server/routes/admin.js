@@ -5,6 +5,7 @@ const AuditLog = require("../models/AuditLog");
 const Service = require("../models/Service");
 const Settings = require("../models/Settings");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { sendAccountStatusEmail } = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -237,6 +238,10 @@ router.patch("/customers/:id/status", requireAuth, requireRole(["Admin", "Supera
     if (!["Active", "Suspended"].includes(status)) return res.status(400).json({ error: "Invalid status." });
     const user = await User.findOneAndUpdate({ id: req.params.id }, { status }, { new: true });
     if (!user) return res.status(404).json({ error: "User not found." });
+    
+    // Send email notification to user
+    sendAccountStatusEmail(user.email, user.name, user.status);
+
     const log = new AuditLog({ id: `L-${Date.now()}`, userEmail: req.user.email, action: `Set user ${user.email} to ${status}`, entity: `User · ${user.id}`, ip: req.ip || "-", time: new Date().toLocaleString(), severity: "warn" });
     await log.save();
     res.json({ success: true, status: user.status });

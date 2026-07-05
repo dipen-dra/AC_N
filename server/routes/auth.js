@@ -12,6 +12,7 @@ const AuditLog = require('../models/AuditLog');
 const { requireAuth } = require('../middleware/auth');
 const Validation = require('../utils/validation');
 const SecurityMonitor = require('../middleware/security');
+const { sendPasswordResetEmail } = require('../utils/emailService');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'autocare_secret_key_123456';
@@ -679,6 +680,9 @@ router.post('/forgot', authLimiter, async (req, res) => {
       resetTokens.set(sanitizedEmail, { token, expires });
       console.log(`[PASSWORD RESET] Token for ${sanitizedEmail}: ${token}`);
       
+      // Send dynamic password reset email
+      await sendPasswordResetEmail(sanitizedEmail, token);
+
       await SecurityMonitor.logEvent({
         userId: user.id,
         userEmail: sanitizedEmail,
@@ -691,7 +695,7 @@ router.post('/forgot', authLimiter, async (req, res) => {
       });
     }
     
-    res.json({ success: true, message: 'If that email exists, a reset link has been sent. Check console for dev token.' });
+    res.json({ success: true, message: 'If that email exists, a reset link with a verification token has been sent.' });
   } catch (err) {
     console.error('Forgot password error:', err);
     res.status(500).json({ success: false, error: 'Failed to process request.' });

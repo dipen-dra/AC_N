@@ -139,4 +139,118 @@ const sendBookingEmail = async (booking, actionType) => {
   }
 };
 
-module.exports = { sendBookingEmail };
+/**
+ * Sends a password reset token/link email to the customer.
+ * @param {string} recipientEmail - Customer email
+ * @param {string} token - The reset token
+ */
+const sendPasswordResetEmail = async (recipientEmail, token) => {
+  try {
+    const transporter = getTransporter();
+    const subject = "🔑 Password Reset Code — AutoCare Nepal";
+    
+    const emailTemplate = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="background-color: #e11d48; padding: 24px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: bold;">AutoCare Nepal</h1>
+        </div>
+        <div style="padding: 24px; background-color: #ffffff; color: #1f2937; line-height: 1.6;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 20px;">Password Reset Request</h2>
+          <p>We received a request to reset the password for your AutoCare Nepal account. Use the following security code/token to set a new password:</p>
+          
+          <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px; font-family: monospace; font-size: 20px; font-weight: bold; text-align: center; letter-spacing: 2px; color: #111827; border: 1px dashed #d1d5db;">
+            ${token}
+          </div>
+          
+          <p>Alternatively, click the link below to go directly to the reset screen:</p>
+          <p style="text-align: center; margin: 24px 0;">
+            <a href="http://localhost:5173/auth/reset?email=${encodeURIComponent(recipientEmail)}&token=${token}" style="background-color: #e11d48; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+          </p>
+          
+          <p style="font-size: 13px; color: #6b7280;">If you didn't request a password reset, you can safely ignore this email. This token is valid for 1 hour.</p>
+        </div>
+        <div style="background-color: #f3f4f6; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
+          &copy; ${new Date().getFullYear()} AutoCare Nepal. All rights reserved.
+        </div>
+      </div>
+    `;
+
+    if (!transporter) {
+      console.log(`\n======================================================`);
+      console.log(`🔑 [SMTP MOCK PASSWORD RESET LOG] to: ${recipientEmail}`);
+      console.log(`🔑 Reset Token: ${token}`);
+      console.log("⚠️ SMTP environment credentials not configured.");
+      console.log(`======================================================\n`);
+      return;
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || `"AutoCare Nepal" <${process.env.SMTP_USER}>`,
+      to: recipientEmail,
+      subject: subject,
+      html: emailTemplate
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Password reset email sent successfully to ${recipientEmail}`);
+  } catch (error) {
+    console.error("❌ Failed to send password reset email:", error);
+  }
+};
+
+/**
+ * Sends an account status notification email (e.g. Suspended / Activated).
+ * @param {string} recipientEmail - Customer email
+ * @param {string} name - Customer name
+ * @param {string} status - 'Active' | 'Suspended'
+ */
+const sendAccountStatusEmail = async (recipientEmail, name, status) => {
+  try {
+    const transporter = getTransporter();
+    const isSuspended = status === "Suspended";
+    const subject = isSuspended ? "⚠️ Account Suspended — AutoCare Nepal" : "✅ Account Activated — AutoCare Nepal";
+    const headerText = isSuspended ? "Account Suspended" : "Account Reactivated";
+    
+    const bodyHtml = isSuspended 
+      ? `<p>Dear ${name},</p><p>We regret to inform you that your AutoCare Nepal account has been <strong>Suspended</strong> by the security administration due to policy reviews or outstanding balances.</p><p>If you believe this is a mistake or wish to appeal, please reply directly to this email or contact support.</p>`
+      : `<p>Dear ${name},</p><p>Great news! Your AutoCare Nepal account has been successfully <strong>Reactivated</strong>. You can now log back in, schedule automotive bookings, and manage your garage listing.</p>`;
+
+    const emailTemplate = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="background-color: ${isSuspended ? "#ef4444" : "#10b981"}; padding: 24px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: bold;">AutoCare Nepal</h1>
+        </div>
+        <div style="padding: 24px; background-color: #ffffff; color: #1f2937; line-height: 1.6;">
+          <h2 style="margin-top: 0; color: #111827; font-size: 20px;">${headerText}</h2>
+          ${bodyHtml}
+        </div>
+        <div style="background-color: #f3f4f6; padding: 16px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb;">
+          &copy; ${new Date().getFullYear()} AutoCare Nepal. All rights reserved.
+        </div>
+      </div>
+    `;
+
+    if (!transporter) {
+      console.log(`\n======================================================`);
+      console.log(`👤 [SMTP MOCK ACCOUNT STATUS LOG] to: ${recipientEmail}`);
+      console.log(`👤 Status: ${status}`);
+      console.log("⚠️ SMTP environment credentials not configured.");
+      console.log(`======================================================\n`);
+      return;
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || `"AutoCare Nepal" <${process.env.SMTP_USER}>`,
+      to: recipientEmail,
+      subject: subject,
+      html: emailTemplate
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`📧 Account status email sent to ${recipientEmail} (Status: ${status})`);
+  } catch (error) {
+    console.error("❌ Failed to send account status email:", error);
+  }
+};
+
+module.exports = { sendBookingEmail, sendPasswordResetEmail, sendAccountStatusEmail };
