@@ -136,13 +136,22 @@ Run this command in the project root directory to automatically install packages
 npm run install:all
 ```
 
-### 3. Launch Development Mode
+### 3. Launch Development Mode & Auto-Seeding
 Launch both servers concurrently with a single command:
 ```bash
 npm run dev
 ```
 * **Vite Frontend Dev Host**: `http://localhost:5173/` (reverse proxied `/api` to port 5001)
 * **Express API Host**: `http://localhost:5001/`
+
+Upon the first server launch, if the database is blank (i.e. contains `< 5` bookings), the system will **automatically seed 6 months of historical dashboard data** (70+ bookings, customers, and audit logs) so the analytics and security panels render immediately with complete growth metrics.
+
+### 4. Force-Reset & Re-Seed Database (Optional)
+If you wish to wipe the database and trigger a fresh re-seed of the historical datasets, execute the following Node.js script in the `/server` folder:
+```bash
+node -e 'const mongoose = require("mongoose"); mongoose.connect("mongodb://127.0.0.1:27017/autocare_nepal").then(async () => { await mongoose.connection.db.collection("bookings").deleteMany({}); await mongoose.connection.db.collection("users").deleteMany({ role: "Customer" }); await mongoose.connection.db.collection("auditlogs").deleteMany({}); console.log("Database cleared. Please restart backend to re-seed."); process.exit(0); });'
+```
+Once cleared, restart your development server (`npm run dev`) to invoke the seeder.
 
 ---
 
