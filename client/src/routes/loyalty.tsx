@@ -7,6 +7,14 @@ import { redeemReward, getBookings } from "@/lib/db-server";
 
 export const Route = createFileRoute("/loyalty")({
   beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") {
+        throw redirect({ to: "/superadmin" });
+      }
+      if (context.user.role === "Admin") {
+        throw redirect({ to: "/admin" });
+      }
+    }
     if (!context.user) {
       throw redirect({ to: "/login" });
     }

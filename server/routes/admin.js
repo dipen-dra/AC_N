@@ -61,7 +61,16 @@ router.get("/analytics", requireAuth, requireRole(["Admin", "Superadmin"]), asyn
       0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun",
       6: "Jul", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec"
     };
+    
+    const nowTime = new Date();
+    const currentMonthLabel = monthMap[nowTime.getMonth()];
+    const prevMonthIdx = nowTime.getMonth() === 0 ? 11 : nowTime.getMonth() - 1;
+    const prevMonthLabel = monthMap[prevMonthIdx];
+
     const revenueByMonth = {};
+    revenueByMonth[prevMonthLabel] = { month: prevMonthLabel, revenue: 0, bookings: 0 };
+    revenueByMonth[currentMonthLabel] = { month: currentMonthLabel, revenue: 0, bookings: 0 };
+
     bookings.forEach(b => {
       // Assuming b.date is parsable or b.createdAt exists
       const date = b.createdAt ? new Date(b.createdAt) : new Date(b.date || Date.now());

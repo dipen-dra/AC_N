@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/chats")({
   beforeLoad: ({ context }) => {
-    if (!context.user || (context.user.role !== "Admin" && context.user.role !== "Superadmin")) {
+    if (!context.user || (context.user.role !== "Admin")) {
       throw redirect({ to: "/login" });
     }
   },

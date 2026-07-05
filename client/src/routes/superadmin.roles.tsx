@@ -3,7 +3,7 @@ import { Check, KeyRound, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { getAdminCustomers, updateCustomerRole } from "@/lib/db-server";
+import { getUsers, updateUserRole, deleteUser } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/roles")({
   beforeLoad: ({ context }) => {
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/superadmin/roles")({
       throw redirect({ to: "/login" });
     }
   },
-  loader: () => getAdminCustomers(),
+  loader: () => getUsers(),
   head: () => ({ meta: [{ title: "Roles & Access — Superadmin" }] }),
   component: Roles,
 });
@@ -44,9 +44,9 @@ function Roles() {
 
   const handleRoleChange = async (id: string, role: string) => {
     setUpdating(id);
-    const res = await updateCustomerRole({ id, role });
+    const res = await updateUserRole(id, role);
     if (res.success) {
-      setCustomers((prev) => prev.map((c) => c.id === id ? { ...c, role: res.role } : c));
+      setCustomers((prev) => prev.map((c) => c.id === id ? { ...c, role } : c));
       toast.success(`Role updated to ${role}.`);
       router.invalidate();
     } else {
@@ -130,7 +130,7 @@ function Roles() {
                         {c.role || "Customer"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex items-center gap-2">
                       <select
                         defaultValue={c.role || "Customer"}
                         disabled={updating === c.id}
@@ -141,6 +141,25 @@ function Roles() {
                         <option value="Admin">Admin</option>
                         <option value="Superadmin">Superadmin</option>
                       </select>
+                      <button
+                        onClick={async () => {
+                          if (confirm(`Are you sure you want to delete ${c.name}?`)) {
+                            setUpdating(c.id);
+                            const res = await deleteUser(c.id);
+                            if (res.success) {
+                              toast.success("User deleted.");
+                              router.invalidate();
+                            } else {
+                              toast.error(res.error || "Failed to delete user.");
+                            }
+                            setUpdating(null);
+                          }
+                        }}
+                        disabled={updating === c.id}
+                        className="rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))

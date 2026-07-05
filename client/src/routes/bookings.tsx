@@ -1,13 +1,22 @@
 import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router";
-import { Calendar, MapPin, MoreVertical, Plus, Wrench } from "lucide-react";
+import { Calendar, MapPin, MoreVertical, Plus, Wrench, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { getBookings, updateBookingStatus } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
+import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/bookings")({
   beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") {
+        throw redirect({ to: "/superadmin" });
+      }
+      if (context.user.role === "Admin") {
+        throw redirect({ to: "/admin" });
+      }
+    }
     if (!context.user) {
       throw redirect({ to: "/login" });
     }
@@ -25,11 +34,50 @@ const statusTone: Record<string, string> = {
   Cancelled: "bg-destructive/15 text-destructive",
 };
 
+function PaginationControls({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="mt-6 flex items-center justify-center gap-2">
+      <button
+        disabled={currentPage === 1}
+        onClick={() => onPageChange(currentPage - 1)}
+        className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent"
+      >
+        Previous
+      </button>
+      {Array.from({ length: totalPages }).map((_, i) => (
+        <button
+          key={i}
+          onClick={() => onPageChange(i + 1)}
+          className={cn(
+            "h-8 w-8 rounded-lg text-xs font-bold transition-all",
+            currentPage === i + 1 ? "bg-primary text-primary-foreground shadow-soft" : "border border-border hover:bg-secondary text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {i + 1}
+        </button>
+      ))}
+      <button
+        disabled={currentPage === totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+        className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent"
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
 function Bookings() {
   const allBookings = Route.useLoaderData();
   const router = useRouter();
   const [tab, setTab] = useState<"current" | "history">("current");
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [cancelBookingId, setCancelBookingId] = useState<string | null>(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
+  const itemsPerPage = 3;
 
   const currentBookings = allBookings.filter(
     (b: any) => b.status === "Upcoming" || b.status === "Confirmed" || b.status === "In Progress",
@@ -39,12 +87,21 @@ function Bookings() {
     (b: any) => statusFilter === "All Status" || b.status === statusFilter
   );
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedCurrentBookings = filteredCurrentBookings.slice(indexOfFirstItem, indexOfLastItem);
+  const totalCurrentPages = Math.ceil(filteredCurrentBookings.length / itemsPerPage);
+
   const bookingHistory = allBookings.filter(
     (b: any) => b.status === "Completed" || b.status === "Cancelled",
   );
 
+  const indexOfLastHistoryItem = historyPage * itemsPerPage;
+  const indexOfFirstHistoryItem = indexOfLastHistoryItem - itemsPerPage;
+  const paginatedHistoryBookings = bookingHistory.slice(indexOfFirstHistoryItem, indexOfLastHistoryItem);
+  const totalHistoryPages = Math.ceil(bookingHistory.length / itemsPerPage);
+
   const handleCancelBooking = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) return;
     try {
       const res = await updateBookingStatus({ data: { id, status: "Cancelled" } });
       if (res.success) {
@@ -109,40 +166,47 @@ function Bookings() {
                   </div>
                 </div>
               ) : (
-                filteredCurrentBookings.map((b: any) => (
-                  <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft hover:shadow-md transition-shadow duration-200">
-                    <div className="flex flex-wrap items-start gap-4">
-                      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary"><Wrench className="h-7 w-7" /></div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs text-muted-foreground font-medium">Booking ID</div>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                          <span className="font-bold text-foreground">{b.id}</span>
-                          <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", statusTone[b.status])}>{b.status}</span>
+                <>
+                  {paginatedCurrentBookings.map((b: any) => (
+                    <article key={b.id} className="rounded-2xl border border-border bg-card p-5 shadow-soft hover:shadow-md transition-shadow duration-200">
+                      <div className="flex flex-wrap items-start gap-4">
+                        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary"><Wrench className="h-7 w-7" /></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs text-muted-foreground font-medium">Booking ID</div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-foreground">{b.id}</span>
+                            <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", statusTone[b.status])}>{b.status}</span>
+                          </div>
+                          <div className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
+                            <InfoLine label="Service" value={<span className="font-semibold text-primary">{b.service}</span>} />
+                            <InfoLine label="Vehicle Log" value={<span className="font-medium text-foreground">{b.vehicle}</span>} />
+                            <InfoLine label="Schedule" value={<div>{b.date} <div className="text-xs text-muted-foreground mt-0.5">{b.time}</div></div>} />
+                            <InfoLine label="Billing & Pickup" value={<div><span className="font-bold text-foreground">Rs. {b.price.toLocaleString()}</span><div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-0.5 truncate"><MapPin className="h-3 w-3 text-primary shrink-0" /> {b.location}</div></div>} />
+                          </div>
                         </div>
-                        <div className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
-                          <InfoLine label="Service" value={<span className="font-semibold text-primary">{b.service}</span>} />
-                          <InfoLine label="Vehicle Log" value={<span className="font-medium text-foreground">{b.vehicle}</span>} />
-                          <InfoLine label="Schedule" value={<div>{b.date} <div className="text-xs text-muted-foreground mt-0.5">{b.time}</div></div>} />
-                          <InfoLine label="Billing & Pickup" value={<div><span className="font-bold text-foreground">Rs. {b.price.toLocaleString()}</span><div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-0.5 truncate"><MapPin className="h-3 w-3 text-primary shrink-0" /> {b.location}</div></div>} />
+                        <div className="flex w-full flex-col items-stretch gap-2.5 sm:w-auto sm:min-w-[220px]">
+                          <div className="rounded-xl border border-border bg-secondary/40 p-3 text-xs">
+                            <div className="font-semibold text-muted-foreground">Estimated Delivery</div>
+                            <div className="mt-1 flex items-center gap-1.5 font-medium text-foreground"><Calendar className="h-3.5 w-3.5 text-primary" /> {b.date}</div>
+                            <div className="mt-1 font-bold text-primary">{b.eta || "Awaiting Confirmation"}</div>
+                          </div>
+                          <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft cursor-pointer">Track Service →</Link>
+                          <button
+                            onClick={() => setCancelBookingId(b.id)}
+                            className="rounded-lg border border-border bg-background py-2 text-center text-sm font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
+                          >
+                            Cancel Booking
+                          </button>
                         </div>
                       </div>
-                      <div className="flex w-full flex-col items-stretch gap-2.5 sm:w-auto sm:min-w-[220px]">
-                        <div className="rounded-xl border border-border bg-secondary/40 p-3 text-xs">
-                          <div className="font-semibold text-muted-foreground">Estimated Delivery</div>
-                          <div className="mt-1 flex items-center gap-1.5 font-medium text-foreground"><Calendar className="h-3.5 w-3.5 text-primary" /> {b.date}</div>
-                          <div className="mt-1 font-bold text-primary">{b.eta || "Awaiting Confirmation"}</div>
-                        </div>
-                        <Link to="/track/$id" params={{ id: b.id }} className="rounded-lg border border-primary bg-background py-2 text-center text-sm font-semibold text-primary hover:bg-primary-soft cursor-pointer">Track Service →</Link>
-                        <button
-                          onClick={() => handleCancelBooking(b.id)}
-                          className="rounded-lg border border-border bg-background py-2 text-center text-sm font-semibold text-destructive hover:bg-destructive/10 cursor-pointer"
-                        >
-                          Cancel Booking
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))
+                    </article>
+                  ))}
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalCurrentPages}
+                    onPageChange={(p) => setCurrentPage(p)}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -168,20 +232,27 @@ function Bookings() {
                   </p>
                 </div>
               ) : (
-                bookingHistory.map((b: any) => (
-                  <div key={b.id} className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[auto_2fr_1fr_1fr_1fr_auto]">
-                    <div className="grid h-10 w-10 place-items-center rounded-lg bg-secondary text-muted-foreground"><Wrench className="h-5 w-5" /></div>
-                    <div className="min-w-0">
-                      <div className="text-xs text-muted-foreground">Booking ID</div>
-                      <div className="truncate font-semibold">{b.id}</div>
-                      <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold", statusTone[b.status])}>{b.status}</span>
+                <>
+                  {paginatedHistoryBookings.map((b: any) => (
+                    <div key={b.id} className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-[auto_2fr_1fr_1fr_1fr_auto]">
+                      <div className="grid h-10 w-10 place-items-center rounded-lg bg-secondary text-muted-foreground"><Wrench className="h-5 w-5" /></div>
+                      <div className="min-w-0">
+                        <div className="text-xs text-muted-foreground">Booking ID</div>
+                        <div className="truncate font-semibold">{b.id}</div>
+                        <span className={cn("mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold", statusTone[b.status])}>{b.status}</span>
+                      </div>
+                      <div className="text-sm"><div className="text-xs text-muted-foreground">Service</div>{b.service}</div>
+                      <div className="text-sm"><div className="text-xs text-muted-foreground">Vehicle</div>{b.vehicle}</div>
+                      <div className="text-sm"><div className="text-xs text-muted-foreground">{b.status === "Cancelled" ? "Cancelled On" : "Completed On"}</div>{b.completed || b.date}</div>
+                      <Link to="/invoice/$id" params={{ id: b.id }} className="self-center rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary">View Details →</Link>
                     </div>
-                    <div className="text-sm"><div className="text-xs text-muted-foreground">Service</div>{b.service}</div>
-                    <div className="text-sm"><div className="text-xs text-muted-foreground">Vehicle</div>{b.vehicle}</div>
-                    <div className="text-sm"><div className="text-xs text-muted-foreground">{b.status === "Cancelled" ? "Cancelled On" : "Completed On"}</div>{b.completed || b.date}</div>
-                    <Link to="/invoice/$id" params={{ id: b.id }} className="self-center rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary">View Details →</Link>
-                  </div>
-                ))
+                  ))}
+                  <PaginationControls
+                    currentPage={historyPage}
+                    totalPages={totalHistoryPages}
+                    onPageChange={(p) => setHistoryPage(p)}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -200,6 +271,22 @@ function Bookings() {
           </Link>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={cancelBookingId !== null}
+        title="Cancel Booking"
+        description="Are you sure you want to cancel this booking? This action cannot be undone."
+        confirmText="Cancel Booking"
+        cancelText="Keep Booking"
+        onConfirm={async () => {
+          if (cancelBookingId) {
+            await handleCancelBooking(cancelBookingId);
+            setCancelBookingId(null);
+          }
+        }}
+        onCancel={() => setCancelBookingId(null)}
+        icon={AlertTriangle}
+        variant="danger"
+      />
     </AppShell>
   );
 }

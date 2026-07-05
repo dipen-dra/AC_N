@@ -9,7 +9,7 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 
 export const Route = createFileRoute("/admin/workshop")({
   beforeLoad: ({ context }) => {
-    if (!context.user || (context.user.role !== "Admin" && context.user.role !== "Superadmin")) {
+    if (!context.user || (context.user.role !== "Admin")) {
       throw redirect({ to: "/login" });
     }
   },

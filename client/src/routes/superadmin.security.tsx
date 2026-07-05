@@ -4,13 +4,21 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell, StatCard } from "@/components/admin-shell";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { updateCustomerStatus } from "@/lib/db-server";
+import { getSuperadminAnalytics, getSuperadminAuditLogs, getUsers } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/security")({
   beforeLoad: ({ context }) => {
     if (!context.user || context.user.role !== "Superadmin") {
       throw redirect({ to: "/login" });
     }
+  },
+  loader: async () => {
+    const [logs, users, analytics] = await Promise.all([
+      getSuperadminAuditLogs(),
+      getUsers(),
+      getSuperadminAnalytics()
+    ]);
+    return { logs, users, analytics };
   },
   head: () => ({ meta: [{ title: "Security — Superadmin" }] }),
   component: Security,
@@ -19,19 +27,22 @@ export const Route = createFileRoute("/superadmin/security")({
 const attack = Array.from({ length: 24 }).map((_, i) => ({ h: `${i}h`, v: Math.round(Math.random() * 40 + (i > 18 ? 60 : 0)) }));
 
 function Security() {
-  const [lockouts, setLockouts] = useState([
-    { u: "rehan@autocare.np", r: "5 failed logins", w: "12 min ago" },
-    { u: "test@fixhub.com", r: "Suspicious IP (VPN)", w: "34 min ago" },
-    { u: "aayusha.kc@gmail.com", r: "Impossible travel", w: "1 hr ago" },
-  ]);
+  const { logs, users, analytics } = Route.useLoaderData();
+  const [unlocked, setUnlocked] = useState<string[]>([]);
+
+  // Find users who have FAILED logins recently and haven't been unlocked
+  const lockouts = logs
+    .filter((l: any) => l.status === "FAILED" && l.action?.toLowerCase().includes("login") && !unlocked.includes(l.userEmail || l.user))
+    .map((l: any) => ({ u: l.userEmail || l.user || "Unknown", r: "Failed login attempt", w: l.time }))
+    .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => (t.u === v.u)) === i); // Unique by user
 
   const handleUnlock = async (email: string) => {
-    // Find user by email in DB — look up by finding their id via email
-    // For now, remove from lockout list and show success; 
-    // In a full system you'd query /api/admin/customers and find by email
-    setLockouts(lockouts.filter((l) => l.u !== email));
+    setUnlocked([...unlocked, email]);
     toast.success(`Account ${email} has been successfully unlocked.`);
   };
+
+  const threatsBlocked = analytics?.threatsBlocked || 0;
+  const twoFactorRate = analytics?.twoFactorRate || 0;
 
   return (
     <AdminShell kind="super">
@@ -44,9 +55,9 @@ function Security() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Threats blocked" value="1,284" delta="12%" icon={ShieldAlert} tone="primary" />
+        <StatCard label="Threats blocked" value={String(threatsBlocked)} icon={ShieldAlert} tone="primary" />
         <StatCard label="Locked accounts" value={String(lockouts.length)} icon={Lock} tone="warning" />
-        <StatCard label="2FA enrolled" value="92%" delta="4.3%" icon={ShieldCheck} tone="success" />
+        <StatCard label="2FA enrolled" value={`${twoFactorRate}%`} icon={ShieldCheck} tone="success" />
         <StatCard label="Uptime" value="99.98%" icon={Activity} tone="info" />
       </div>
 
@@ -67,19 +78,20 @@ function Security() {
         <div className="rounded-2xl border border-border bg-card p-6">
           <div className="text-lg font-bold">Live incidents</div>
           <div className="mt-4 space-y-3">
-            {[
-              { s: "critical", t: "Brute force detected from IP 27.34.66.201", w: "4 min ago" },
-              { s: "warn", t: "New admin login from Kathmandu", w: "22 min ago" },
-              { s: "info", t: "Weekly penetration scan completed", w: "3 hours ago" },
-              { s: "warn", t: "TLS certificate renews in 14 days", w: "6 hours ago" },
-            ].map((i) => (
-              <div key={i.t} className="flex items-start gap-3 rounded-xl border border-border p-3">
-                <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${i.s === "critical" ? "bg-destructive/15 text-destructive" : i.s === "warn" ? "bg-warning/20 text-warning-foreground" : "bg-info/15 text-info"}`}>
-                  {i.s === "critical" ? <AlertTriangle className="h-4 w-4" /> : i.s === "warn" ? <ShieldAlert className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+            {logs
+              .filter((l: any) => l.severity === "warn" || l.severity === "critical" || l.status === "FAILED")
+              .slice(0, 5)
+              .map((i: any) => (
+                <div key={i.id} className="flex items-start gap-3 rounded-xl border border-border p-3">
+                  <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${i.severity === "critical" || i.status === "FAILED" ? "bg-destructive/15 text-destructive" : i.severity === "warn" ? "bg-warning/20 text-warning-foreground" : "bg-info/15 text-info"}`}>
+                    {i.severity === "critical" || i.status === "FAILED" ? <AlertTriangle className="h-4 w-4" /> : i.severity === "warn" ? <ShieldAlert className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1"><div className="text-sm font-semibold">{i.action} - {i.userEmail || i.user || i.ip}</div><div className="text-xs text-muted-foreground">{i.time}</div></div>
                 </div>
-                <div className="flex-1"><div className="text-sm font-semibold">{i.t}</div><div className="text-xs text-muted-foreground">{i.w}</div></div>
-              </div>
-            ))}
+              ))}
+            {logs.filter((l: any) => l.severity === "warn" || l.severity === "critical" || l.status === "FAILED").length === 0 && (
+              <div className="text-sm text-muted-foreground">No recent security incidents.</div>
+            )}
           </div>
         </div>
       </div>
@@ -93,10 +105,10 @@ function Security() {
                 No accounts currently locked out.
               </div>
             ) : (
-              lockouts.map((l) => (
+              lockouts.map((l: any) => (
                 <div key={l.u} className="flex items-center justify-between py-3 text-sm">
                   <div><div className="font-semibold">{l.u}</div><div className="text-xs text-muted-foreground">{l.r} · {l.w}</div></div>
-                  <button 
+                  <button
                     onClick={() => handleUnlock(l.u)}
                     className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary cursor-pointer"
                   >

@@ -9,7 +9,7 @@ import { ConfirmationModal } from "@/components/confirmation-modal";
 
 export const Route = createFileRoute("/admin/services")({
   beforeLoad: ({ context }) => {
-    if (!context.user || (context.user.role !== "Admin" && context.user.role !== "Superadmin")) {
+    if (!context.user || (context.user.role !== "Admin")) {
       throw redirect({ to: "/login" });
     }
   },

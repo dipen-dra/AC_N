@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { AuthLayout, GoogleButton } from "@/components/auth-layout";
 import { loginUser } from "@/lib/auth-server";
 
+import { redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/login")({
+  beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") throw redirect({ to: "/superadmin" });
+      if (context.user.role === "Admin") throw redirect({ to: "/admin" });
+      throw redirect({ to: "/" });
+    }
+  },
   head: () => ({ meta: [{ title: "Login — AutoCare Nepal" }] }),
   component: Login,
 });
@@ -36,7 +44,9 @@ function Login() {
         } else {
           toast.success("Successfully logged in!");
           await router.invalidate(); // Invalidate the router cache to reload root loader (getCurrentUser)
-          if (result.user?.role === "Admin" || result.user?.role === "Superadmin" || result.user?.role === "SuperAdmin") {
+          if (result.user?.role === "Superadmin" || result.user?.role === "SuperAdmin") {
+            navigate({ to: "/superadmin" });
+          } else if (result.user?.role === "Admin") {
             navigate({ to: "/admin" });
           } else {
             navigate({ to: "/" });

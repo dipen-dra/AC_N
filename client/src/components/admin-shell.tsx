@@ -149,25 +149,18 @@ export function AdminShell({ children, kind = "admin" }: { children: ReactNode; 
               </Link>
             );
           })}
-          {kind === "admin" && (
-            <button onClick={() => setIsLogoutConfirmOpen(true)} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors cursor-pointer text-left">
-              <LogOut className="h-4 w-4" /> Sign out
-            </button>
-          )}
-        </nav>
-        {kind === "super" && (
-          <div className="border-t border-sidebar-border p-3">
-            <Link to="/admin" className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-sidebar-accent/60">
-              <Shield className="h-4 w-4" /> Switch to Admin
-            </Link>
-            <Link to="/superadmin/settings" className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent/60">
+          {kind === "super" && (
+            <Link to="/superadmin/settings" className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              location.pathname.startsWith("/superadmin/settings") ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+            )}>
               <Settings className="h-4 w-4" /> Settings
             </Link>
-            <button onClick={() => setIsLogoutConfirmOpen(true)} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent/60 text-left cursor-pointer">
-              <LogOut className="h-4 w-4" /> Sign out
-            </button>
-          </div>
-        )}
+          )}
+          <button onClick={() => setIsLogoutConfirmOpen(true)} className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors cursor-pointer text-left">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-xl sm:px-6">

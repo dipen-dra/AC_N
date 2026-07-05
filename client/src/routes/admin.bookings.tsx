@@ -6,10 +6,11 @@ import { AdminShell } from "@/components/admin-shell";
 import { getBookings, updateBookingStatus } from "@/lib/db-server";
 import { exportToCSV } from "@/lib/export";
 import { StatusPill } from "./admin.index";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/bookings")({
   beforeLoad: ({ context }) => {
-    if (!context.user || (context.user.role !== "Admin" && context.user.role !== "Superadmin")) {
+    if (!context.user || (context.user.role !== "Admin")) {
       throw redirect({ to: "/login" });
     }
   },
@@ -26,6 +27,9 @@ function AdminBookings() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [serviceFilter, setServiceFilter] = useState("All services");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Edit Modal State
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -46,6 +50,27 @@ function AdminBookings() {
 
     return matchesSearch && matchesStatus && matchesService;
   });
+
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (val: string) => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handleServiceFilterChange = (val: string) => {
+    setServiceFilter(val);
+    setCurrentPage(1);
+  };
 
   const handleOpenEdit = (booking: any) => {
     setSelectedBooking(booking);
@@ -120,13 +145,13 @@ function AdminBookings() {
             <input 
               placeholder="Search by booking ID, customer or vehicle..." 
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
           <select 
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
             className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option>All statuses</option>
@@ -138,7 +163,7 @@ function AdminBookings() {
           </select>
           <select 
             value={serviceFilter}
-            onChange={(e) => setServiceFilter(e.target.value)}
+            onChange={(e) => handleServiceFilterChange(e.target.value)}
             className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option>All services</option>
@@ -153,14 +178,14 @@ function AdminBookings() {
               <tr>{["Booking ID", "Customer", "Service", "Vehicle", "Date & Time", "Amount", "Technician", "Status", ""].map((h) => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredBookings.length === 0 ? (
+              {paginatedBookings.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
                     No bookings matched your search filter criteria.
                   </td>
                 </tr>
               ) : (
-                filteredBookings.map((b: any) => (
+                paginatedBookings.map((b: any) => (
                   <tr key={b.id} className="hover:bg-secondary/40">
                     <td className="px-4 py-3 font-semibold">{b.id}</td>
                     <td className="px-4 py-3">{b.customer}</td>
@@ -184,8 +209,42 @@ function AdminBookings() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between border-t border-border p-4 text-sm text-muted-foreground">
-          <div>Showing {filteredBookings.length} of {bookings.length} bookings</div>
+        <div className="flex flex-wrap items-center justify-between border-t border-border p-4 gap-3">
+          <div className="text-xs text-muted-foreground">
+            Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+            <span className="font-semibold">{Math.min(currentPage * itemsPerPage, filteredBookings.length)}</span> of{" "}
+            <span className="font-semibold">{filteredBookings.length}</span> bookings
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent cursor-pointer"
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={cn(
+                    "h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                    currentPage === i + 1 ? "bg-primary text-primary-foreground shadow-soft" : "border border-border hover:bg-secondary text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary disabled:opacity-50 disabled:hover:bg-transparent cursor-pointer"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

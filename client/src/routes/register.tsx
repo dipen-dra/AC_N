@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { AuthLayout, GoogleButton } from "@/components/auth-layout";
 import { registerUser } from "@/lib/auth-server";
 
+import { redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/register")({
+  beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") throw redirect({ to: "/superadmin" });
+      if (context.user.role === "Admin") throw redirect({ to: "/admin" });
+      throw redirect({ to: "/" });
+    }
+  },
   head: () => ({ meta: [{ title: "Sign Up — AutoCare Nepal" }] }),
   component: Signup,
 });

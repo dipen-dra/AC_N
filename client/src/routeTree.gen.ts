@@ -130,9 +130,9 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrackIdRoute = TrackIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => TrackRoute,
+  id: '/track/$id',
+  path: '/track/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SuperadminSettingsRoute = SuperadminSettingsRouteImport.update({
   id: '/superadmin/settings',
@@ -461,6 +461,7 @@ export interface RootRouteChildren {
   SuperadminRolesRoute: typeof SuperadminRolesRoute
   SuperadminSecurityRoute: typeof SuperadminSecurityRoute
   SuperadminSettingsRoute: typeof SuperadminSettingsRoute
+  TrackIdRoute: typeof TrackIdRoute
   AdminIndexRoute: typeof AdminIndexRoute
   SuperadminIndexRoute: typeof SuperadminIndexRoute
   TrackIndexRoute: typeof TrackIndexRoute
@@ -589,10 +590,10 @@ declare module '@tanstack/react-router' {
     }
     '/track/$id': {
       id: '/track/$id'
-      path: '/$id'
+      path: '/track/$id'
       fullPath: '/track/$id'
       preLoaderRoute: typeof TrackIdRouteImport
-      parentRoute: typeof TrackRoute
+      parentRoute: typeof rootRouteImport
     }
     '/superadmin/settings': {
       id: '/superadmin/settings'
@@ -752,6 +753,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperadminRolesRoute: SuperadminRolesRoute,
   SuperadminSecurityRoute: SuperadminSecurityRoute,
   SuperadminSettingsRoute: SuperadminSettingsRoute,
+  TrackIdRoute: TrackIdRoute,
   AdminIndexRoute: AdminIndexRoute,
   SuperadminIndexRoute: SuperadminIndexRoute,
   TrackIndexRoute: TrackIndexRoute,

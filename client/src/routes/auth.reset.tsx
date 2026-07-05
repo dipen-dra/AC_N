@@ -5,7 +5,15 @@ import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { resetPassword } from "@/lib/db-server";
 
+import { redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/auth/reset")({
+  beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") throw redirect({ to: "/superadmin" });
+      if (context.user.role === "Admin") throw redirect({ to: "/admin" });
+      throw redirect({ to: "/" });
+    }
+  },
   head: () => ({ meta: [{ title: "Reset Password — AutoCare Nepal" }] }),
   component: Reset,
 });

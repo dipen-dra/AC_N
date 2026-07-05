@@ -13,7 +13,12 @@ const bookingSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   status: { type: String, default: "Upcoming" }, // Upcoming, Confirmed, In Progress, Completed, Cancelled
   technician: { type: String, default: "-" },
-  eta: { type: String, default: "" }
+  eta: { type: String, default: "" },
+  paymentStatus: { type: String, default: "Pending" }, // Pending, Paid, Failed
+  paymentMethod: { type: String, default: "Cash on Delivery" },
+  esewaTransactionUuid: { type: String, unique: true, sparse: true },
+  khaltiPidx: { type: String, unique: true, sparse: true },
+  promoCode: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Booking", bookingSchema);

@@ -9,6 +9,14 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 
 export const Route = createFileRoute("/book")({
   beforeLoad: ({ context }) => {
+    if (context.user) {
+      if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") {
+        throw redirect({ to: "/superadmin" });
+      }
+      if (context.user.role === "Admin") {
+        throw redirect({ to: "/admin" });
+      }
+    }
     if (!context.user) {
       throw redirect({ to: "/login" });
     }
@@ -72,6 +80,18 @@ function Book() {
     }
     fetchBooked();
   }, [pickupDate, technician]);
+  
+  // Load Khalti script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://khalti.s3.ap-south-1.amazonaws.com/KPG/dist/2020.12.17.0.0.0/khalti-checkout.iffe.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const svc = services.find((s: any) => s.id === selected) || services[0];
   if (!svc) {
@@ -117,6 +137,7 @@ function Book() {
   const handleConfirmBooking = async () => {
     setBookingLoading(true);
     try {
+      const formattedMethod = pay === "esewa" ? "eSewa" : pay === "khalti" ? "Khalti" : pay === "card" ? "Card" : "Cash on Delivery";
       const result = await createBooking({
         data: {
           serviceId: svc.id,
@@ -129,17 +150,59 @@ function Book() {
           price: finalTotal,
           technician: technician,
           promoCode: appliedPromo?.code || undefined,
+          paymentMethod: formattedMethod
         },
       });
 
       if (result.success) {
+        if (result.paymentMethod === "eSewa" && result.esewaConfig) {
+          toast.success("Redirecting to eSewa...");
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+          Object.entries(result.esewaConfig).forEach(([key, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = key;
+            input.value = String(value);
+            form.appendChild(input);
+          });
+          document.body.appendChild(form);
+          form.submit();
+          document.body.removeChild(form);
+          return;
+        }
+
+        if (result.paymentMethod === "Khalti" && result.khaltiConfig) {
+          toast.success("Opening Khalti checkout...");
+          const config = {
+            ...result.khaltiConfig,
+            eventHandler: {
+              onSuccess(payload: any) {
+                console.log("Khalti Success Payload:", payload);
+                window.location.href = `/payment-success?method=khalti&bookingId=${result.khaltiConfig.bookingId}&token=${payload.token}&amount=${payload.amount}`;
+              },
+              onError(error: any) {
+                console.error("Khalti Error Payload:", error);
+                toast.error("Khalti payment failed.");
+              },
+              onClose() {
+                console.log("Khalti Widget Closed");
+              }
+            }
+          };
+          const checkout = new (window as any).KhaltiCheckout(config);
+          checkout.show({ amount: config.amount });
+          return;
+        }
+
         toast.success("Booking confirmed!");
         nav({
           to: "/payment-success",
           search: {
-            bookingId: result.bookingId,
+            bookingId: result.booking?.id || result.bookingId,
             amount: String(finalTotal),
-            paymentMethod: pay === "esewa" ? "eSewa" : pay === "khalti" ? "Khalti" : pay === "card" ? "Card" : "Cash on Delivery",
+            paymentMethod: formattedMethod,
           },
         });
       } else {

@@ -145,6 +145,91 @@ export const clearChatMessages = async (data?: { userEmail: string }) => {
   }
 };
 
+export const getSuperadminAuditLogs = async (): Promise<any[]> => {
+  try {
+    const res = await fetch("/api/superadmin/audit", {
+      headers: { "Cache-Control": "no-cache" }
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.logs || [];
+  } catch (error) {
+    return [];
+  }
+};
+
+// ================= SUPERADMIN API =================
+
+export const getSuperadminAnalytics = async (): Promise<any> => {
+  try {
+    const res = await fetch("/api/superadmin/analytics", { headers: { "Cache-Control": "no-cache" } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const getUsers = async (): Promise<any[]> => {
+  try {
+    const res = await fetch("/api/superadmin/users", { headers: { "Cache-Control": "no-cache" } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.users || [];
+  } catch (error) {
+    return [];
+  }
+};
+
+export const updateUserRole = async (userId: string, role: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch(`/api/superadmin/users/${userId}/role`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role })
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update role." };
+  }
+};
+
+export const deleteUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch(`/api/superadmin/users/${userId}`, {
+      method: "DELETE"
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: "Failed to delete user." };
+  }
+};
+
+export const getSystemSettings = async (): Promise<any> => {
+  try {
+    const res = await fetch("/api/superadmin/settings", { headers: { "Cache-Control": "no-cache" } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.settings || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+export const updateSystemSettings = async (data: any): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch("/api/superadmin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update settings." };
+  }
+};
+
 // 8. Get Audit Logs (Client API Fetcher)
 export const getAuditLogs = async () => {
   try {

@@ -79,7 +79,7 @@ function Services() {
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">{s.desc}</p>
                 <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4">
-                  {s.features.map((f) => (
+                  {s.features.map((f: string) => (
                     <div key={f} className="flex items-center gap-1.5 text-xs text-foreground/80"><Check className="h-3.5 w-3.5 text-success" /> {f}</div>
                   ))}
                 </div>

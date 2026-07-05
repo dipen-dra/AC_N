@@ -3,7 +3,7 @@ import { Activity, AlertTriangle, FileText, KeyRound, ShieldCheck, Users } from 
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AdminShell, StatCard } from "@/components/admin-shell";
 import { cn } from "@/lib/utils";
-import { getAuditLogs } from "@/lib/db-server";
+import { getSuperadminAuditLogs, getSuperadminAnalytics } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/")({
   beforeLoad: ({ context }) => {
@@ -11,15 +11,27 @@ export const Route = createFileRoute("/superadmin/")({
       throw redirect({ to: "/login" });
     }
   },
-  loader: () => getAuditLogs(),
+  loader: async () => {
+    const [logs, analytics] = await Promise.all([
+      getSuperadminAuditLogs(),
+      getSuperadminAnalytics()
+    ]);
+    return { logs, analytics };
+  },
   head: () => ({ meta: [{ title: "Superadmin — AutoCare Nepal" }] }),
   component: Super,
 });
 
-const traffic = Array.from({ length: 12 }).map((_, i) => ({ h: `${i * 2}h`, requests: Math.round(400 + Math.random() * 800), threats: Math.round(Math.random() * 40) }));
+const traffic = Array.from({ length: 12 }).map((_: any, i: number) => ({ h: `${i * 2}h`, requests: Math.round(400 + Math.random() * 800), threats: Math.round(Math.random() * 40) }));
 
 function Super() {
-  const logs = Route.useLoaderData() || [];
+  const { logs, analytics } = Route.useLoaderData();
+  
+  const totalUsers = analytics?.totalUsers || 0;
+  const activeSessions = analytics?.activeSessions || 1;
+  const revenue = analytics?.totalRevenue || 0;
+  const failedSignIns = logs.filter((l: any) => l.status === "FAILED" && l.action?.toLowerCase().includes("login")).length;
+  
   return (
     <AdminShell kind="super">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -30,10 +42,10 @@ function Super() {
         <div className="flex items-center gap-2 rounded-full bg-success/10 px-3 py-1.5 text-xs font-semibold text-success"><span className="h-2 w-2 rounded-full bg-success" /> Systems nominal</div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total users" value="4,236" icon={Users} tone="primary" />
-        <StatCard label="Admin roles" value="8" icon={KeyRound} tone="info" />
-        <StatCard label="Failed sign-ins (24h)" value="27" icon={AlertTriangle} tone="warning" />
-        <StatCard label="Security score" value="94/100" icon={ShieldCheck} tone="success" />
+        <StatCard label="Total users" value={String(totalUsers)} icon={Users} tone="primary" />
+        <StatCard label="Active sessions" value={String(activeSessions)} icon={Activity} tone="info" />
+        <StatCard label="Failed logins (recent)" value={String(failedSignIns)} icon={AlertTriangle} tone={failedSignIns > 5 ? "warning" : "info"} />
+        <StatCard label="Platform Revenue" value={`Rs. ${(revenue / 1000).toFixed(1)}k`} icon={FileText} tone="success" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">

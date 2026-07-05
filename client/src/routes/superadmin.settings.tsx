@@ -3,7 +3,7 @@ import { Bell, Globe, Lock, ShieldCheck, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { getAdminSettings, updateAdminSettings } from "@/lib/db-server";
+import { getSystemSettings, updateSystemSettings } from "@/lib/db-server";
 
 export const Route = createFileRoute("/superadmin/settings")({
   beforeLoad: ({ context }) => {
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/superadmin/settings")({
       throw redirect({ to: "/login" });
     }
   },
-  loader: () => getAdminSettings(),
+  loader: () => getSystemSettings(),
   head: () => ({ meta: [{ title: "Settings — Superadmin" }] }),
   component: Settings,
 });
@@ -44,7 +44,7 @@ function Settings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await updateAdminSettings(settings);
+      const res = await updateSystemSettings(settings);
       if (res.success) {
         toast.success("Settings updated successfully.");
         router.invalidate();

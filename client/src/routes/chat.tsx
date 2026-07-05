@@ -12,6 +12,12 @@ export const Route = createFileRoute("/chat")({
     if (!context.user) {
       throw redirect({ to: "/login" });
     }
+    if (context.user.role === "Superadmin" || context.user.role === "SuperAdmin") {
+      throw redirect({ to: "/superadmin" });
+    }
+    if (context.user.role === "Admin") {
+      throw redirect({ to: "/admin" });
+    }
   },
   loader: () => getChatMessages(),
   head: () => ({ meta: [{ title: "Chat with Support — AutoCare Nepal" }] }),
