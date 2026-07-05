@@ -45,7 +45,7 @@ function Services() {
                 placeholder="Search services..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-11 w-72 rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" 
+                className="h-12 w-72 rounded-xl border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" 
               />
             </div>
           </div>
@@ -54,7 +54,7 @@ function Services() {
             <select 
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium outline-none focus:border-primary"
+              className="h-12 rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             >
               <option>Popular</option><option>Price low → high</option><option>Price high → low</option><option>Rating</option>
             </select>

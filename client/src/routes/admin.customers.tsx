@@ -129,13 +129,13 @@ function AdminCustomers() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email or phone..."
-              className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary"
+              className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option value="All">All statuses</option>
             <option value="Active">Active</option>

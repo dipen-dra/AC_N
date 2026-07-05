@@ -19,7 +19,8 @@ const SettingsSchema = new mongoose.Schema({
   // API Access
   esewaLive: { type: Boolean, default: false },
   khaltiLive: { type: Boolean, default: false },
-  twilioSms: { type: Boolean, default: true }
+  twilioSms: { type: Boolean, default: true },
+  aiChatbotAutoReply: { type: Boolean, default: false }
 }, {
   timestamps: true
 });

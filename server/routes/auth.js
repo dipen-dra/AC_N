@@ -436,6 +436,7 @@ router.get('/me', requireAuth, async (req, res) => {
         vehicles: user.vehicles,
         points: user.points,
         tier: user.tier,
+        redeemedRewards: user.redeemedRewards,
         initial: user.initial,
         status: user.status,
         role: user.role,
@@ -481,6 +482,24 @@ router.post('/vehicles', requireAuth, async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to add vehicle.' });
   }
 });
+// ========== EDIT VEHICLE ==========
+router.put('/vehicles/:plate', requireAuth, async (req, res) => {
+  try {
+    const { newPlate, newModel } = req.body;
+    if (!newPlate || !newModel) return res.status(400).json({ error: 'Plate and model are required.' });
+    const user = await User.findById(req.user._id);
+    const vehicleIndex = user.vehicles.findIndex(v => v.plate === req.params.plate);
+    if (vehicleIndex === -1) return res.status(404).json({ error: 'Vehicle not found.' });
+    
+    user.vehicles[vehicleIndex].plate = newPlate;
+    user.vehicles[vehicleIndex].model = newModel;
+    await user.save();
+    res.json({ success: true, vehicles: user.vehicles });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to edit vehicle.' });
+  }
+});
+
 
 // ========== REMOVE VEHICLE ==========
 router.delete('/vehicles/:plate', requireAuth, async (req, res) => {

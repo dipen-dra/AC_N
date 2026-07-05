@@ -121,13 +121,13 @@ function AdminBookings() {
               placeholder="Search by booking ID, customer or vehicle..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary" 
+              className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option>All statuses</option>
             <option>Upcoming</option>
@@ -139,7 +139,7 @@ function AdminBookings() {
           <select 
             value={serviceFilter}
             onChange={(e) => setServiceFilter(e.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option>All services</option>
             {uniqueServices.map((srv) => (
@@ -231,7 +231,7 @@ function AdminBookings() {
                 <select 
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none"
+                  className="h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 >
                   <option value="Upcoming">Upcoming</option>
                   <option value="Confirmed">Confirmed</option>
@@ -248,7 +248,7 @@ function AdminBookings() {
                   value={editTechnician}
                   onChange={(e) => setEditTechnician(e.target.value)}
                   placeholder="e.g. Ramesh KC" 
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none" 
+                  className="h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" 
                 />
               </div>
 
@@ -259,7 +259,7 @@ function AdminBookings() {
                   value={editEta}
                   onChange={(e) => setEditEta(e.target.value)}
                   placeholder="e.g. 03:30 PM - 04:00 PM" 
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none" 
+                  className="h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" 
                 />
               </div>
 

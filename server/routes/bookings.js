@@ -20,6 +20,94 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+// VALIDATE PROMO CODE
+const User = require("../models/User");
+router.post("/validate-promo", requireAuth, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    const promo = user.redeemedRewards?.find(r => r.code === code);
+    if (!promo) return res.status(400).json({ error: "Invalid promo code." });
+    if (promo.isUsed) return res.status(400).json({ error: "Promo code already used." });
+
+    // Calculate discount value based on the reward name
+    let discountAmount = 0;
+    let isPercentage = false;
+
+    if (promo.name.includes("Rs. ")) {
+      // E.g., "Rs. 500 Service Credit"
+      const match = promo.name.match(/Rs\.\s*(\d+)/);
+      if (match) discountAmount = parseInt(match[1], 10);
+    } else if (promo.name.includes("% Off")) {
+      // E.g., "20% Off Full Service"
+      const match = promo.name.match(/(\d+)%\s*Off/);
+      if (match) {
+        discountAmount = parseInt(match[1], 10);
+        isPercentage = true;
+      }
+    } else if (promo.name.includes("Free Car Wash")) {
+      // Hardcoded value for a standard wash if we don't know the exact price dynamically
+      discountAmount = 1500; 
+    } else if (promo.name.includes("Free Oil Change")) {
+      discountAmount = 3000;
+    }
+
+    res.json({
+      success: true,
+      promo: {
+        code: promo.code,
+        name: promo.name,
+        discountAmount,
+        isPercentage
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to validate promo." });
+  }
+});
+// GET BOOKED SLOTS
+router.get("/booked-slots", requireAuth, async (req, res) => {
+  try {
+    const { date, technician } = req.query;
+    if (!date) return res.status(400).json({ error: "Date is required" });
+
+    const workshop = await Workshop.findOne();
+    const baysCount = workshop ? (workshop.baysCount || 12) : 12;
+    
+    // Find all active bookings on this date
+    const dayBookings = await Booking.find({ date, status: { $ne: "Cancelled" } });
+    
+    const slotsMap = {};
+    const bookedForMech = new Set();
+    
+    dayBookings.forEach(b => {
+      // Count total bookings per time slot to check bay capacity
+      slotsMap[b.time] = (slotsMap[b.time] || 0) + 1;
+      
+      // If a specific mechanic is requested, mark slots they are busy
+      if (technician && technician !== "Any Available Mechanic" && b.technician === technician) {
+        bookedForMech.add(b.time);
+      }
+    });
+
+    const fullyBookedSlots = [];
+    const allPossibleSlots = ["10:00 AM - 12:00 PM", "12:00 PM - 02:00 PM", "04:00 PM - 06:00 PM", "06:00 PM - 08:00 PM"];
+    
+    for (const slot of allPossibleSlots) {
+      // Slot is unavailable if the specific mechanic is busy, OR if all physical bays are full
+      if (bookedForMech.has(slot) || (slotsMap[slot] >= baysCount)) {
+        fullyBookedSlots.push(slot);
+      }
+    }
+
+    res.json(fullyBookedSlots);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch booked slots." });
+  }
+});
+
 // GET BOOKING BY ID
 router.get("/:id", requireAuth, async (req, res) => {
   try {
@@ -39,8 +127,9 @@ router.get("/:id", requireAuth, async (req, res) => {
 // CREATE NEW BOOKING
 router.post("/", requireAuth, async (req, res) => {
   try {
-    const { service, vehicle, date, time, location, price } = req.body;
-    if (!service || !vehicle || !date || !time || !location || !price) {
+    const { service, serviceName, vehicle, date, time, location, price } = req.body;
+    const finalService = service || serviceName;
+    if (!finalService || !vehicle || !date || !time || !location || price === undefined || price === null) {
       return res.status(400).json({ error: "All booking fields are required." });
     }
     
@@ -81,7 +170,7 @@ router.post("/", requireAuth, async (req, res) => {
       userId: req.user.id,
       customer: req.user.name,
       customerEmail: req.user.email,
-      service,
+      service: finalService,
       vehicle,
       date,
       time,
@@ -92,20 +181,30 @@ router.post("/", requireAuth, async (req, res) => {
       eta: ""
     });
     await newBooking.save();
+    
+    const user = await User.findById(req.user._id);
+
+    // If a promo code was applied, mark it as used
+    if (req.body.promoCode && user) {
+      const promoIndex = user.redeemedRewards?.findIndex(r => r.code === req.body.promoCode);
+      if (promoIndex !== undefined && promoIndex > -1) {
+        user.redeemedRewards[promoIndex].isUsed = true;
+      }
+    }
 
     // Reward points: 10% of transaction price as points
     const earnedPoints = Math.round(price * 0.1);
-    const updatedPoints = req.user.points + earnedPoints;
+    const updatedPoints = user.points + earnedPoints;
     
     // Tier calculations
-    let updatedTier = req.user.tier;
+    let updatedTier = user.tier;
     if (updatedPoints >= 2500) updatedTier = "Platinum";
     else if (updatedPoints >= 1000) updatedTier = "Gold";
     else if (updatedPoints >= 500) updatedTier = "Silver";
     
-    req.user.points = updatedPoints;
-    req.user.tier = updatedTier;
-    await req.user.save();
+    user.points = updatedPoints;
+    user.tier = updatedTier;
+    await user.save();
 
     // Log audit log
     const logId = `L-${Math.floor(1000 + Math.random() * 9000)}`;

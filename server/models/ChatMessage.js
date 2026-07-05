@@ -7,7 +7,8 @@ const chatMessageSchema = new mongoose.Schema({
   senderRole: { type: String, required: true }, // Customer, Admin, bot
   text: { type: String, required: true },
   time: { type: String, required: true },
-  read: { type: Boolean, default: false }
+  read: { type: Boolean, default: false },
+  clearedByCustomer: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model("ChatMessage", chatMessageSchema);

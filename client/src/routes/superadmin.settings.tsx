@@ -31,7 +31,8 @@ function Settings() {
     timezone: "Asia/Kathmandu",
     esewaLive: false,
     khaltiLive: false,
-    twilioSms: true
+    twilioSms: true,
+    aiChatbotAutoReply: false
   });
   
   const [saving, setSaving] = useState(false);
@@ -87,7 +88,8 @@ function Settings() {
       opts: [
         { key: "esewaLive", label: "eSewa (Live)" },
         { key: "khaltiLive", label: "Khalti (Live)" },
-        { key: "twilioSms", label: "Twilio SMS" }
+        { key: "twilioSms", label: "Twilio SMS" },
+        { key: "aiChatbotAutoReply", label: "OpenRouter AI Chatbot" }
       ]
     }
   ];

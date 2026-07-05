@@ -59,7 +59,20 @@ export const createBooking = async ({ data: payload }: { data: any }) => {
   }
 };
 
-// 5. Update Booking Status (Client API Fetcher)
+// 5. Get Booked Slots (Client API Fetcher)
+export const getBookedSlots = async (date: string, technician: string) => {
+  try {
+    const url = `/api/bookings/booked-slots?date=${encodeURIComponent(date)}&technician=${encodeURIComponent(technician)}`;
+    const response = await fetch(url);
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getBookedSlots:", error);
+    return [];
+  }
+};
+
+// 6. Update Booking Status (Client API Fetcher)
 export const updateBookingStatus = async ({ data }: { data: any }) => {
   try {
     const { id, status, technician, eta } = data;
@@ -265,6 +278,19 @@ export const redeemReward = async ({ rewardName, cost }: { rewardName: string; c
     return await response.json();
   } catch (error) {
     return { success: false, error: "Failed to redeem reward." };
+  }
+};
+
+export const validatePromo = async (code: string) => {
+  try {
+    const response = await fetch("/api/bookings/validate-promo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to validate promo code." };
   }
 };
 

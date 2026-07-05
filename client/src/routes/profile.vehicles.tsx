@@ -3,7 +3,7 @@ import { Car, Plus, Trash2, Key } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/confirmation-modal";
-import { addVehicle, removeVehicle } from "@/lib/auth-server";
+import { addVehicle, removeVehicle, editVehicle } from "@/lib/auth-server";
 
 export const Route = createFileRoute("/profile/vehicles")({
   component: ProfileVehicles,
@@ -14,6 +14,7 @@ function ProfileVehicles() {
   const router = useRouter();
 
   const [showAddVehicle, setShowAddVehicle] = useState(false);
+  const [editingVehiclePlate, setEditingVehiclePlate] = useState<string | null>(null);
   const [newPlate, setNewPlate] = useState("");
   const [newModel, setNewModel] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -31,17 +32,31 @@ function ProfileVehicles() {
       return;
     }
     setIsSaving(true);
-    const res = await addVehicle(newPlate, newModel);
+    let res;
+    if (editingVehiclePlate) {
+      res = await editVehicle(editingVehiclePlate, newPlate, newModel);
+    } else {
+      res = await addVehicle(newPlate, newModel);
+    }
+    
     if (res.success) {
+      toast.success(editingVehiclePlate ? `Vehicle updated successfully.` : `Vehicle ${newPlate} added to your garage.`);
       setNewPlate("");
       setNewModel("");
       setShowAddVehicle(false);
-      toast.success(`Vehicle ${newPlate} added to your garage.`);
+      setEditingVehiclePlate(null);
       router.invalidate();
     } else {
-      toast.error(res.error || "Failed to add vehicle.");
+      toast.error(res.error || (editingVehiclePlate ? "Failed to update vehicle." : "Failed to add vehicle."));
     }
     setIsSaving(false);
+  };
+
+  const handleEditClick = (v: any) => {
+    setEditingVehiclePlate(v.plate);
+    setNewPlate(v.plate);
+    setNewModel(v.model);
+    setShowAddVehicle(true);
   };
 
   const handleDeleteVehicleClick = (plate: string) => {
@@ -67,29 +82,32 @@ function ProfileVehicles() {
     <section className="relative overflow-hidden rounded-3xl border border-border bg-card/60 p-8 shadow-elevated backdrop-blur-xl transition-all">
       <div className="absolute -right-20 -bottom-20 -z-10 h-64 w-64 rounded-full bg-accent/40 blur-3xl" />
       
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 border-b border-border/50 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h3 className="text-2xl font-extrabold tracking-tight">My Vehicles</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Manage your vehicle profiles for speedier booking checkpoints.</p>
+          <h2 className="text-xl font-bold tracking-tight">Your Garage</h2>
+          <p className="text-sm text-muted-foreground mt-1">Manage the vehicles you bring in for service.</p>
         </div>
-        {!showAddVehicle && (
-          <button 
-            onClick={() => setShowAddVehicle(true)}
-            className="mt-4 sm:mt-0 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-soft transition-all hover:bg-primary/90 hover:shadow active:scale-95 focus:ring-2 focus:ring-primary/50"
-          >
-            <Plus className="h-4 w-4" /> Add Vehicle
-          </button>
-        )}
+        <button 
+          onClick={() => {
+            setEditingVehiclePlate(null);
+            setNewPlate("");
+            setNewModel("");
+            setShowAddVehicle(!showAddVehicle);
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-soft transition-all hover:bg-primary/90 active:scale-95"
+        >
+          {showAddVehicle ? "Cancel" : <><Plus className="h-4 w-4" /> Add Vehicle</>}
+        </button>
       </div>
 
       {showAddVehicle && (
-        <form onSubmit={handleAddVehicle} className="mb-8 animate-in slide-in-from-top-4 fade-in overflow-hidden rounded-2xl border border-primary/20 bg-primary-soft/10 p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/20 text-primary">
+        <form onSubmit={handleAddVehicle} className="mb-8 animate-in slide-in-from-top-4 fade-in overflow-hidden rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
+          <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/20 text-primary">
               <Car className="h-4 w-4" />
             </div>
-            <h4 className="font-bold">Register New Vehicle</h4>
-          </div>
+            {editingVehiclePlate ? "Edit Vehicle" : "Add a New Vehicle"}
+          </h3>
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Plate Number</label>
@@ -115,7 +133,12 @@ function ProfileVehicles() {
           <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-primary/10">
             <button 
               type="button" 
-              onClick={() => setShowAddVehicle(false)}
+              onClick={() => {
+                setShowAddVehicle(false);
+                setEditingVehiclePlate(null);
+                setNewPlate("");
+                setNewModel("");
+              }}
               className="rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-accent focus:ring-2 focus:ring-border"
             >
               Cancel
@@ -166,13 +189,22 @@ function ProfileVehicles() {
                     <p className="text-sm text-muted-foreground mt-0.5">{v.model}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteVehicleClick(v.plate)}
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-transparent text-muted-foreground transition-all hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive active:scale-95"
-                  title="Remove vehicle"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEditClick(v)}
+                    className="grid h-10 px-3 place-items-center text-xs font-semibold rounded-xl border border-transparent text-primary transition-all hover:border-primary/20 hover:bg-primary/10 active:scale-95"
+                    title="Edit vehicle"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteVehicleClick(v.plate)}
+                    className="grid h-10 w-10 place-items-center rounded-xl border border-transparent text-muted-foreground transition-all hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive active:scale-95"
+                    title="Remove vehicle"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           ))

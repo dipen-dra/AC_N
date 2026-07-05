@@ -304,11 +304,22 @@ router.post("/loyalty/redeem", requireAuth, async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ error: "User not found." });
     if (user.points < cost) return res.status(400).json({ error: "Insufficient points." });
+    const generateCode = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let code = 'REWARD-';
+      for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      return code;
+    };
+    const promoCode = generateCode();
+
     user.points -= cost;
+    user.redeemedRewards.push({ name: rewardName, code: promoCode, cost });
     await user.save();
-    const log = new AuditLog({ id: `L-${Date.now()}`, userEmail: user.email, action: `Redeemed reward: ${rewardName} (-${cost} pts)`, entity: `User · ${user.id}`, ip: req.ip || "-", time: new Date().toLocaleString(), severity: "info" });
+    
+    const log = new AuditLog({ id: `L-${Date.now()}`, userEmail: user.email, action: `Redeemed reward: ${rewardName} (-${cost} pts, Code: ${promoCode})`, entity: `User · ${user.id}`, ip: req.ip || "-", time: new Date().toLocaleString(), severity: "info" });
     await log.save();
-    res.json({ success: true, points: user.points });
+    
+    res.json({ success: true, points: user.points, code: promoCode });
   } catch (err) {
     res.status(500).json({ error: "Failed to redeem reward." });
   }

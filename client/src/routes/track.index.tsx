@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { getBookings } from "@/lib/db-server";
 
-export const Route = createFileRoute("/track")({
+export const Route = createFileRoute("/track/")({
   beforeLoad: ({ context }) => {
     if (!context.user) {
       throw redirect({ to: "/login" });

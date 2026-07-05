@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TrackRouteImport } from './routes/track'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as RegsiterRouteImport } from './routes/regsiter'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -23,6 +22,7 @@ import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrackIndexRouteImport } from './routes/track.index'
 import { Route as SuperadminIndexRouteImport } from './routes/superadmin.index'
 import { Route as ProfileIndexRouteImport } from './routes/profile.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -44,11 +44,6 @@ import { Route as AdminChatsRouteImport } from './routes/admin.chats'
 import { Route as AdminBookingsRouteImport } from './routes/admin.bookings'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 
-const TrackRoute = TrackRouteImport.update({
-  id: '/track',
-  path: '/track',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ServicesRoute = ServicesRouteImport.update({
   id: '/services',
   path: '/services',
@@ -112,6 +107,11 @@ const AiAssistantRoute = AiAssistantRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackIndexRoute = TrackIndexRouteImport.update({
+  id: '/track/',
+  path: '/track/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SuperadminIndexRoute = SuperadminIndexRouteImport.update({
@@ -229,7 +229,6 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
-  '/track': typeof TrackRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
   '/admin/chats': typeof AdminChatsRoute
@@ -250,6 +249,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/track/': typeof TrackIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -264,7 +264,6 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
-  '/track': typeof TrackRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
   '/admin/chats': typeof AdminChatsRoute
@@ -285,6 +284,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
+  '/track': typeof TrackIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -301,7 +301,6 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
-  '/track': typeof TrackRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/bookings': typeof AdminBookingsRoute
   '/admin/chats': typeof AdminChatsRoute
@@ -322,6 +321,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
+  '/track/': typeof TrackIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -339,7 +339,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/regsiter'
     | '/services'
-    | '/track'
     | '/admin/analytics'
     | '/admin/bookings'
     | '/admin/chats'
@@ -360,6 +359,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/profile/'
     | '/superadmin/'
+    | '/track/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -374,7 +374,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/regsiter'
     | '/services'
-    | '/track'
     | '/admin/analytics'
     | '/admin/bookings'
     | '/admin/chats'
@@ -395,6 +394,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/profile'
     | '/superadmin'
+    | '/track'
   id:
     | '__root__'
     | '/'
@@ -410,7 +410,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/regsiter'
     | '/services'
-    | '/track'
     | '/admin/analytics'
     | '/admin/bookings'
     | '/admin/chats'
@@ -431,6 +430,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/profile/'
     | '/superadmin/'
+    | '/track/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -447,7 +447,6 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   RegsiterRoute: typeof RegsiterRoute
   ServicesRoute: typeof ServicesRoute
-  TrackRoute: typeof TrackRouteWithChildren
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBookingsRoute: typeof AdminBookingsRoute
   AdminChatsRoute: typeof AdminChatsRoute
@@ -464,17 +463,11 @@ export interface RootRouteChildren {
   SuperadminSettingsRoute: typeof SuperadminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   SuperadminIndexRoute: typeof SuperadminIndexRoute
+  TrackIndexRoute: typeof TrackIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/track': {
-      id: '/track'
-      path: '/track'
-      fullPath: '/track'
-      preLoaderRoute: typeof TrackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/services': {
       id: '/services'
       path: '/services'
@@ -564,6 +557,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track/': {
+      id: '/track/'
+      path: '/track'
+      fullPath: '/track/'
+      preLoaderRoute: typeof TrackIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/superadmin/': {
@@ -724,16 +724,6 @@ const ProfileRouteChildren: ProfileRouteChildren = {
 const ProfileRouteWithChildren =
   ProfileRoute._addFileChildren(ProfileRouteChildren)
 
-interface TrackRouteChildren {
-  TrackIdRoute: typeof TrackIdRoute
-}
-
-const TrackRouteChildren: TrackRouteChildren = {
-  TrackIdRoute: TrackIdRoute,
-}
-
-const TrackRouteWithChildren = TrackRoute._addFileChildren(TrackRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiAssistantRoute: AiAssistantRoute,
@@ -748,7 +738,6 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   RegsiterRoute: RegsiterRoute,
   ServicesRoute: ServicesRoute,
-  TrackRoute: TrackRouteWithChildren,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBookingsRoute: AdminBookingsRoute,
   AdminChatsRoute: AdminChatsRoute,
@@ -765,6 +754,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperadminSettingsRoute: SuperadminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
   SuperadminIndexRoute: SuperadminIndexRoute,
+  TrackIndexRoute: TrackIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

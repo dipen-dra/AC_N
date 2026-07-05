@@ -8,6 +8,11 @@ export const Route = createFileRoute("/payment-success")({
 });
 
 function PaySuccess() {
+  const search: any = Route.useSearch();
+  const amount = search.amount || "0";
+  const bookingId = search.bookingId || "AC-UNKNOWN";
+  const paymentMethod = search.paymentMethod || "Cash on Delivery";
+  
   return (
     <AppShell>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -27,7 +32,7 @@ function PaySuccess() {
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-success/15 text-success"><Receipt className="h-5 w-5" /></div>
                 <div>
                   <div className="text-xs text-muted-foreground">Booking ID</div>
-                  <div className="font-bold">AC-2026-0515-000123</div>
+                  <div className="font-bold">{bookingId}</div>
                 </div>
               </div>
               <div className="mt-3 border-t border-success/20 pt-3 text-center text-sm text-muted-foreground">
@@ -45,16 +50,16 @@ function PaySuccess() {
               <dl className="mt-4 space-y-4 text-sm">
                 <div className="flex items-center justify-between border-b border-border pb-3">
                   <dt className="flex items-center gap-2 text-muted-foreground"><Wallet className="h-4 w-4" /> Paid Via</dt>
-                  <dd className="font-bold text-success">eSewa</dd>
+                  <dd className="font-bold text-success">{paymentMethod}</dd>
                 </div>
                 <div className="flex items-center justify-between border-b border-border pb-3">
-                  <dt className="text-muted-foreground"># Transaction ID</dt><dd className="font-semibold">ESW1234567890123</dd>
+                  <dt className="text-muted-foreground"># Transaction ID</dt><dd className="font-semibold">TXN-{Math.floor(100000 + Math.random() * 900000)}</dd>
                 </div>
                 <div className="flex items-center justify-between border-b border-border pb-3">
-                  <dt className="text-muted-foreground">Payment Date</dt><dd className="font-semibold">15 May, 2026 · 10:15 AM</dd>
+                  <dt className="text-muted-foreground">Payment Date</dt><dd className="font-semibold">{new Date().toLocaleString()}</dd>
                 </div>
                 <div className="flex items-center justify-between">
-                  <dt className="text-muted-foreground">Amount Paid</dt><dd className="text-lg font-extrabold text-success">Rs. 4,540</dd>
+                  <dt className="text-muted-foreground">Amount Paid</dt><dd className="text-lg font-extrabold text-success">Rs. {Number(amount).toLocaleString()}</dd>
                 </div>
               </dl>
               <div className="mt-4 rounded-xl border border-success/20 bg-success/10 p-3 text-xs">

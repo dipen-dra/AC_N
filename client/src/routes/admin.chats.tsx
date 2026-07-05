@@ -1,9 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Bot, MessageSquare, Search, Send, RefreshCw, Trash2, Smile, Paperclip } from "lucide-react";
+import { Bot, MessageSquare, Search, Send, RefreshCw, Trash2, Smile, Paperclip, CheckCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
-import { getChatMessages, sendChatMessage, markChatAsRead, clearChatMessages } from "@/lib/db-server";
+import { getChatMessages, sendChatMessage, markChatAsRead, clearChatMessages, getAdminSettings, updateAdminSettings } from "@/lib/db-server";
 import { ConfirmationModal } from "@/components/confirmation-modal";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ function AdminChats() {
   const [reply, setReply] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,12 +36,30 @@ function AdminChats() {
   const load = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const msgs = await getChatMessages();
+      const [msgs, settings] = await Promise.all([
+        getChatMessages(),
+        getAdminSettings()
+      ]);
       setMessages(msgs);
+      if (settings) {
+        setAiEnabled(settings.aiChatbotAutoReply || false);
+      }
     } catch (err) {
-      toast.error("Failed to load chat messages.");
+      toast.error("Failed to load chat data.");
     } finally {
       if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleToggleAi = async () => {
+    const newVal = !aiEnabled;
+    setAiEnabled(newVal);
+    try {
+      await updateAdminSettings({ aiChatbotAutoReply: newVal });
+      toast.success(newVal ? "AI Auto-Reply Enabled" : "AI Auto-Reply Disabled");
+    } catch {
+      toast.error("Failed to update AI settings.");
+      setAiEnabled(!newVal);
     }
   };
 
@@ -220,9 +239,23 @@ function AdminChats() {
           <h1 className="text-3xl font-extrabold">Chats</h1>
           <p className="text-sm text-muted-foreground">Reply to customer conversations in real time.</p>
         </div>
-        <button onClick={() => load(true)} className="grid h-9 w-9 place-items-center rounded-lg border border-border hover:bg-secondary cursor-pointer">
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 shadow-sm">
+            <span className="text-sm font-semibold text-muted-foreground flex items-center gap-2"><Bot className="h-4 w-4" /> AI Auto-Reply</span>
+            <button
+              onClick={handleToggleAi}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                aiEnabled ? "bg-primary" : "bg-input"
+              )}
+            >
+              <span className={cn("pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform", aiEnabled ? "translate-x-4" : "translate-x-0")} />
+            </button>
+          </div>
+          <button onClick={() => load(true)} className="grid h-9 w-9 place-items-center rounded-lg border border-border hover:bg-secondary cursor-pointer">
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
       <div className="grid h-[75vh] gap-4 rounded-2xl border border-border bg-card lg:grid-cols-[320px_1fr]">
         {/* Thread list */}
@@ -238,22 +271,26 @@ function AdminChats() {
               />
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {loading ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">Loading...</div>
+              <div className="text-center text-sm text-muted-foreground">Loading...</div>
             ) : filteredEmails.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">No conversations yet.</div>
+              <div className="text-center text-sm text-muted-foreground">No conversations yet.</div>
             ) : (
               filteredEmails.map((email) => {
                 const last = latestByUser(email);
                 const unread = getUnreadCount(email);
+                const isActive = activeEmail === email;
                 return (
                   <button
                     key={email}
                     onClick={() => setActiveEmail(email)}
-                    className={`flex w-full items-start gap-3 border-b border-border p-4 text-left hover:bg-secondary/50 transition-colors cursor-pointer ${activeEmail === email ? "bg-primary/5 border-l-2 border-l-primary" : "border-l-2 border-l-transparent"}`}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors cursor-pointer",
+                      isActive ? "border border-primary/30 bg-primary-soft" : "border border-transparent hover:bg-secondary/50"
+                    )}
                   >
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary font-bold text-sm text-secondary-foreground">{email[0].toUpperCase()}</div>
+                    <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl font-bold text-sm", isActive ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground")}>{email[0].toUpperCase()}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
                         <div className="truncate font-semibold text-sm">{email}</div>
@@ -274,7 +311,7 @@ function AdminChats() {
         </aside>
 
         {/* Chat window */}
-        <section className="flex flex-col">
+        <section className="flex flex-col min-h-0">
           {!activeEmail ? (
             <div className="flex flex-1 items-center justify-center text-muted-foreground">Select a conversation</div>
           ) : (
@@ -295,7 +332,7 @@ function AdminChats() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </header>
-              <div ref={bottomRef} className="flex-1 space-y-4 overflow-y-auto p-6">
+              <div ref={bottomRef} className="flex-1 space-y-4 overflow-y-auto p-6 min-h-0">
                 {threadMsgs.map((m: any, i: number) => {
                   const isAdmin = m.senderRole !== "Customer";
                   const isImage = m.text.startsWith("data:image/");
@@ -316,6 +353,9 @@ function AdminChats() {
                         ) : (
                           <div className="whitespace-pre-wrap break-words">{m.text}</div>
                         )}
+                        <div className={cn("mt-1 flex items-center gap-1 text-[10px]", isAdmin ? "justify-end text-primary-foreground/80" : "text-muted-foreground")}>
+                          {m.time} {isAdmin && <CheckCheck className={cn("h-3.5 w-3.5", m.read ? "text-white font-extrabold" : "opacity-60")} />}
+                        </div>
                       </div>
                     </div>
                   );

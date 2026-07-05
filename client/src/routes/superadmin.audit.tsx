@@ -32,10 +32,10 @@ function Audit() {
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input placeholder="Search action, user or entity..." className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary" />
+            <input placeholder="Search action, user or entity..." className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
           </div>
-          <select className="rounded-lg border border-border bg-background px-3 py-2 text-sm"><option>All severities</option><option>Critical</option><option>Warning</option><option>Info</option></select>
-          <select className="rounded-lg border border-border bg-background px-3 py-2 text-sm"><option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option></select>
+          <select className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"><option>All severities</option><option>Critical</option><option>Warning</option><option>Info</option></select>
+          <select className="h-12 rounded-xl border border-border bg-background px-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"><option>Last 24 hours</option><option>Last 7 days</option><option>Last 30 days</option></select>
           <button className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"><Filter className="h-4 w-4" /> Filters</button>
         </div>
         <div className="overflow-x-auto">

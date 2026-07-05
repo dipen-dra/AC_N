@@ -161,6 +161,19 @@ export const removeVehicle = async (plate: string): Promise<{ success: boolean; 
   }
 };
 
+export const editVehicle = async (plate: string, newPlate: string, newModel: string): Promise<{ success: boolean; vehicles?: any[]; error?: string }> => {
+  try {
+    const res = await fetch(`/api/auth/vehicles/${plate}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newPlate, newModel }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: "Failed to edit vehicle." };
+  }
+};
+
 export const generate2FA = async (): Promise<{ success: boolean; secret?: string; qrCode?: string; error?: string }> => {
   try {
     const res = await fetch("/api/auth/2fa/generate", { method: "POST" });

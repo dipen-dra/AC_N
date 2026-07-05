@@ -114,25 +114,25 @@ function AdminServices() {
           <form onSubmit={handleSave} className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Service Name *</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Full Service" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Full Service" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Category</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary">
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
                 {["Maintenance", "Repair", "Inspection", "Cleaning", "Electrical"].map((c) => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Price (Rs.) *</label>
-              <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. 4500" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
+              <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. 4500" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Duration *</label>
-              <input value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 3-4 hours" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
+              <input value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="e.g. 3-4 hours" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1">Description *</label>
-              <textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} rows={2} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary resize-none" />
+              <textarea value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} rows={3} className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
               <input type="checkbox" id="popular" checked={form.popular} onChange={(e) => setForm({ ...form, popular: e.target.checked })} className="h-4 w-4" />

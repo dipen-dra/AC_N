@@ -187,7 +187,7 @@ function Chat() {
             </div>
           </aside>
 
-          <section className="flex h-[70vh] flex-col rounded-2xl border border-border bg-card">
+          <section className="flex h-[70vh] min-h-0 flex-col rounded-2xl border border-border bg-card">
             <header className="flex items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary"><MessageSquare className="h-5 w-5" /></div>
@@ -208,7 +208,7 @@ function Chat() {
               </div>
             </header>
 
-            <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-6">
+            <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-5 py-6 min-h-0">
               <div className="text-center text-xs text-muted-foreground mb-4">Today</div>
               {msgs.length === 0 ? (
                 <div className="text-center text-sm text-muted-foreground py-8">

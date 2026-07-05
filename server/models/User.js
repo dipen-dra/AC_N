@@ -68,6 +68,13 @@ const userSchema = new mongoose.Schema({
     enum: ['Bronze', 'Silver', 'Gold', 'Platinum'],
     default: 'Bronze'
   },
+  redeemedRewards: [{
+    name: String,
+    code: String,
+    cost: Number,
+    isUsed: { type: Boolean, default: false },
+    redeemedAt: { type: Date, default: Date.now }
+  }],
   initial: {
     type: String,
     maxlength: 1

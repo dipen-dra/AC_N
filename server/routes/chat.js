@@ -1,5 +1,6 @@
 const express = require("express");
 const ChatMessage = require("../models/ChatMessage");
+const Settings = require("../models/Settings");
 const { requireAuth, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
@@ -12,8 +13,8 @@ router.get("/", requireAuth, async (req, res) => {
       // Admins get everything to build the threads list
       query = {};
     } else {
-      // Customers only get their own thread
-      query = { userEmail: req.user.email };
+      // Customers only get their own thread and exclude messages they have cleared
+      query = { userEmail: req.user.email, clearedByCustomer: { $ne: true } };
     }
     const messages = await ChatMessage.find(query).sort({ _id: 1 });
     res.json(messages);
@@ -63,6 +64,11 @@ router.post("/", requireAuth, async (req, res) => {
       // Process AI auto-reply asynchronously
       setTimeout(async () => {
         try {
+          const settings = await Settings.findOne();
+          if (!settings || !settings.aiChatbotAutoReply) {
+            return; // Bot is disabled
+          }
+
           // Fetch up to last 10 messages for context
           const history = await ChatMessage.find({ userEmail: req.user.email })
             .sort({ _id: -1 })
@@ -92,6 +98,7 @@ router.post("/", requireAuth, async (req, res) => {
             },
             body: JSON.stringify({
               model: "openai/gpt-4o",
+              max_tokens: 1000,
               messages: apiMessages
             })
           });
@@ -157,11 +164,14 @@ router.delete("/", requireAuth, async (req, res) => {
       const { userEmail } = req.body;
       if (!userEmail) return res.status(400).json({ error: "userEmail is required." });
       query = { userEmail };
+      // Admins permanently delete the thread
+      await ChatMessage.deleteMany(query);
     } else {
       query = { userEmail: req.user.email };
+      // Customers just hide the thread from their view
+      await ChatMessage.updateMany(query, { $set: { clearedByCustomer: true } });
     }
 
-    await ChatMessage.deleteMany(query);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: "Failed to clear chat history." });

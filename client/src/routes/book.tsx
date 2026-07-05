@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Building2, Calendar, Car, Check, CheckCircle2, Clock, MapPin, ShieldCheck, Truck, Wrench } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Building2, Calendar, Car, Check, CheckCircle2, Clock, MapPin, ShieldCheck, Truck, Wrench, Locate, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
-import { getServices, getWorkshopDetails, createBooking } from "@/lib/db-server";
+import { getServices, getWorkshopDetails, createBooking, getBookedSlots, validatePromo } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 export const Route = createFileRoute("/book")({
   beforeLoad: ({ context }) => {
@@ -24,25 +25,55 @@ const steps = ["Service Details", "Vehicle & Location", "Pick-up & Drop", "Confi
 const slots = ["10:00 AM - 12:00 PM", "12:00 PM - 02:00 PM", "04:00 PM - 06:00 PM", "06:00 PM - 08:00 PM"];
 
 function Book() {
-  const { services, workshop } = Route.useLoaderData();
   const nav = useNavigate();
+  const { services, workshop } = Route.useLoaderData();
+  const team = workshop?.team || [];
+  
+  const { loading: geoLoading, fetchLocation } = useGeolocation();
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(services[0]?.id || "");
   const [pickup, setPickup] = useState("pickup");
   const [slot, setSlot] = useState(slots[0]);
   const [technician, setTechnician] = useState("Any Available Mechanic");
   const [pay, setPay] = useState<"esewa" | "khalti" | "card" | "cod">("esewa");
-  
-  const team = workshop?.team || [];
+
+
+  const { user } = Route.useRouteContext() as any;
+  const vehicles = user?.vehicles || [];
+  const primaryVehicle = vehicles.find((v: any) => v.primary) || vehicles[0];
 
   // Form Fields State
-  const [vehicleNumber, setVehicleNumber] = useState("BA 2 PA 5512");
-  const [model, setModel] = useState("Toyota Yaris");
-  const [address, setAddress] = useState("Lalitpur, Nepal");
-  const [pickupDate, setPickupDate] = useState("2026-05-15");
+  const [vehicleNumber, setVehicleNumber] = useState(primaryVehicle?.plate || "");
+  const [model, setModel] = useState(primaryVehicle?.model || "");
+  const [address, setAddress] = useState(user?.address || "");
+  const [pickupDate, setPickupDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
 
-  const svc = services.find((s) => s.id === selected) || services[0];
+  // Promo Code States
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string, name: string, discountAmount: number, isPercentage: boolean } | null>(null);
+
+  useEffect(() => {
+    async function fetchBooked() {
+      const booked = await getBookedSlots(pickupDate, technician);
+      setBookedSlots(booked);
+      // Auto-select a different slot if the current one is booked
+      if (booked.includes(slot)) {
+        const firstAvail = slots.find(s => !booked.includes(s));
+        if (firstAvail) setSlot(firstAvail);
+      }
+    }
+    fetchBooked();
+  }, [pickupDate, technician]);
+
+  const svc = services.find((s: any) => s.id === selected) || services[0];
   if (!svc) {
     return (
       <AppShell>
@@ -54,7 +85,34 @@ function Book() {
   }
 
   const pickupFee = pickup === "pickup" ? 0 : 0;
-  const total = svc.price + pickupFee;
+  let finalTotal = svc.price + pickupFee;
+  if (appliedPromo) {
+    if (appliedPromo.isPercentage) {
+      finalTotal = finalTotal - (finalTotal * (appliedPromo.discountAmount / 100));
+    } else {
+      finalTotal = finalTotal - appliedPromo.discountAmount;
+    }
+    if (finalTotal < 0) finalTotal = 0;
+  }
+
+  const handleApplyPromo = async () => {
+    if (!promoCode) return;
+    setPromoError("");
+    setPromoLoading(true);
+    try {
+      const res = await validatePromo(promoCode);
+      if (res.success && res.promo) {
+        setAppliedPromo(res.promo);
+        toast.success(`Promo code applied: ${res.promo.name}`);
+      } else {
+        setPromoError(res.error || "Invalid promo code");
+      }
+    } catch {
+      setPromoError("Something went wrong");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const handleConfirmBooking = async () => {
     setBookingLoading(true);
@@ -68,8 +126,9 @@ function Book() {
           date: pickupDate,
           time: slot,
           location: address,
-          price: total,
+          price: finalTotal,
           technician: technician,
+          promoCode: appliedPromo?.code || undefined,
         },
       });
 
@@ -79,7 +138,7 @@ function Book() {
           to: "/payment-success",
           search: {
             bookingId: result.bookingId,
-            amount: String(total),
+            amount: String(finalTotal),
             paymentMethod: pay === "esewa" ? "eSewa" : pay === "khalti" ? "Khalti" : pay === "card" ? "Card" : "Cash on Delivery",
           },
         });
@@ -124,21 +183,51 @@ function Book() {
             {step === 0 && (
               <div className="space-y-6">
                 <SectionTitle icon={Car} title="Vehicle Details" desc="Enter your vehicle information" />
+                {vehicles.length > 0 && (
+                  <div className="mb-2">
+                    <Field label="Select from your garage">
+                      <select 
+                        onChange={(e) => {
+                          const v = vehicles.find((veh: any) => veh.plate === e.target.value);
+                          if (v) {
+                            setVehicleNumber(v.plate);
+                            setModel(v.model);
+                          } else {
+                            setVehicleNumber("");
+                            setModel("");
+                          }
+                        }}
+                        className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      >
+                        <option value="">Enter manually...</option>
+                        {vehicles.map((v: any) => (
+                          <option key={v.plate} value={v.plate}>{v.plate} - {v.model}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Vehicle Number">
-                    <input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)} className="input" />
+                    <input 
+                      value={vehicleNumber} 
+                      onChange={(e) => setVehicleNumber(e.target.value)} 
+                      placeholder="e.g. BA 1 PA 1234"
+                      className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
                   </Field>
                   <Field label="Brand / Model">
-                    <select value={model} onChange={(e) => setModel(e.target.value)} className="input">
-                      <option>Toyota Yaris</option>
-                      <option>Honda City</option>
-                      <option>Hyundai i20</option>
-                    </select>
+                    <input 
+                      value={model} 
+                      onChange={(e) => setModel(e.target.value)} 
+                      placeholder="e.g. Toyota Corolla"
+                      className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
                   </Field>
                 </div>
                 <SectionTitle icon={Wrench} title="Service Details" desc="You have selected the service" />
                 <div className="space-y-2">
-                  {services.map((s) => (
+                  {services.map((s: any) => (
                     <button key={s.id} onClick={() => setSelected(s.id)} className={cn(
                       "flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all",
                       selected === s.id ? "border-primary bg-primary-soft/60" : "border-border hover:border-primary/40"
@@ -161,15 +250,43 @@ function Book() {
               <div className="space-y-6">
                 <SectionTitle icon={MapPin} title="Pick-up Location" desc="Where should we pick up your vehicle?" />
                 <Field label="Full address">
-                  <input value={address} onChange={(e) => setAddress(e.target.value)} className="input" />
+                  <div className="relative">
+                    <input 
+                      value={address} 
+                      onChange={(e) => setAddress(e.target.value)} 
+                      placeholder="e.g. 123 Main Street, Kathmandu"
+                      className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 pr-12 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" 
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const loc = await fetchLocation();
+                        if (loc?.address) setAddress(loc.address);
+                      }}
+                      disabled={geoLoading}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
+                      title="Use Current Location"
+                    >
+                      {geoLoading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Locate className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </Field>
                 <SectionTitle icon={Calendar} title="Date & Mechanic" desc="Choose your preferred date, time, and mechanic" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Pick-up Date">
-                    <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="input" />
+                    <input 
+                      type="date" 
+                      value={pickupDate} 
+                      onChange={(e) => setPickupDate(e.target.value)} 
+                      className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" 
+                    />
                   </Field>
                   <Field label="Preferred Mechanic">
-                    <select value={technician} onChange={(e) => setTechnician(e.target.value)} className="input">
+                    <select 
+                      value={technician} 
+                      onChange={(e) => setTechnician(e.target.value)} 
+                      className="flex h-12 w-full rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
                       <option value="Any Available Mechanic">Any Available Mechanic</option>
                       {team.map((m: any) => (
                         <option key={m.id || m.name} value={m.name}>{m.name} ({m.role || "Technician"})</option>
@@ -179,11 +296,23 @@ function Book() {
                 </div>
                 <Field label="Preferred Time Slot">
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                    {slots.map((s) => (
-                      <button key={s} onClick={() => setSlot(s)} className={cn("rounded-lg border py-3 text-sm font-semibold", slot === s ? "border-primary bg-primary-soft text-primary" : "border-border")}>
-                        {s} {slot === s && <CheckCircle2 className="ml-2 inline h-4 w-4" />}
-                      </button>
-                    ))}
+                    {slots.map((s) => {
+                      const isBooked = bookedSlots.includes(s);
+                      return (
+                        <button 
+                          key={s} 
+                          disabled={isBooked}
+                          onClick={() => setSlot(s)} 
+                          className={cn(
+                            "rounded-lg border py-3 text-sm font-semibold transition-colors", 
+                            isBooked ? "border-border bg-secondary/30 text-muted-foreground/50 cursor-not-allowed opacity-50" :
+                            slot === s ? "border-primary bg-primary-soft text-primary" : "border-border hover:border-primary/40"
+                          )}
+                        >
+                          {s} {isBooked ? "(Booked)" : slot === s && <CheckCircle2 className="ml-2 inline h-4 w-4" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </Field>
               </div>
@@ -257,7 +386,7 @@ function Book() {
                   disabled={bookingLoading}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {bookingLoading ? "Confirming..." : `Pay Rs. ${total.toLocaleString()} & Confirm`} <ArrowRight className="h-4 w-4" />
+                  {bookingLoading ? "Confirming..." : `Pay Rs. ${finalTotal.toLocaleString()} & Confirm`} <ArrowRight className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -274,27 +403,56 @@ function Book() {
               </div>
               <div className="font-bold text-primary">Rs. {svc.price.toLocaleString()}</div>
             </div>
-            <dl className="mt-5 space-y-3 text-sm">
+            <dl className="mt-5 space-y-4 text-sm">
               {[
-                ["Vehicle Number", vehicleNumber],
-                ["Brand / Model", model],
-                ["Pick-up Location", address],
-                ["Pick-up Date & Time", `${pickupDate} · ${slot}`],
-                ["Pick-up Option", pickup === "pickup" ? "Pick-up from my location" : "Drop at Service Center"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-start justify-between gap-3">
-                  <dt className="flex items-center gap-2 text-muted-foreground"><Clock className="h-3.5 w-3.5" /> {k}</dt>
-                  <dd className="text-right font-medium">{v}</dd>
+                { label: "Vehicle Number", value: vehicleNumber || "Not provided", icon: Car },
+                { label: "Brand / Model", value: model || "Not provided", icon: CheckCircle2 },
+                { label: "Pick-up Location", value: address || "Not provided", icon: MapPin },
+                { label: "Date & Time", value: `${pickupDate || "Any date"} · ${slot || "Any time"}`, icon: Calendar },
+                { label: "Pick-up Option", value: pickup === "pickup" ? "Pick-up from my location" : "Drop at Service Center", icon: Truck },
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-start justify-between gap-4 rounded-lg bg-secondary/30 p-3">
+                  <dt className="flex items-center gap-2 text-muted-foreground"><item.icon className="h-4 w-4 text-primary/70" /> {item.label}</dt>
+                  <dd className="text-right font-semibold">{item.value}</dd>
                 </div>
               ))}
             </dl>
             <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Promo code (Optional)"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  disabled={!!appliedPromo || promoLoading}
+                  className="flex-1 h-10 rounded-lg border border-border bg-background px-3 outline-none focus:border-primary disabled:opacity-50"
+                />
+                <button 
+                  onClick={handleApplyPromo}
+                  disabled={!promoCode || !!appliedPromo || promoLoading}
+                  className="h-10 rounded-lg bg-secondary px-4 font-semibold text-foreground disabled:opacity-50 hover:bg-secondary/80"
+                >
+                  {promoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : appliedPromo ? "Applied" : "Apply"}
+                </button>
+              </div>
+              {promoError && <div className="text-xs text-destructive">{promoError}</div>}
+              {appliedPromo && <div className="text-xs text-success font-semibold">✓ {appliedPromo.name} applied!</div>}
+            </div>
+            <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
               <div className="flex justify-between"><span>Service Charges</span><span className="font-medium">Rs. {svc.price.toLocaleString()}</span></div>
               <div className="flex justify-between"><span>Pick-up & Drop</span><span className="font-semibold text-success">Free</span></div>
+              {appliedPromo && (
+                <div className="flex justify-between text-success">
+                  <span>Discount ({appliedPromo.name})</span>
+                  <span className="font-semibold">
+                    -{appliedPromo.isPercentage ? `${appliedPromo.discountAmount}%` : `Rs. ${appliedPromo.discountAmount.toLocaleString()}`}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
               <div className="text-sm text-muted-foreground">Total Amount</div>
-              <div className="text-2xl font-extrabold text-primary">Rs. {total.toLocaleString()}</div>
+              <div className="text-2xl font-extrabold text-primary">Rs. {finalTotal.toLocaleString()}</div>
             </div>
             <div className="mt-5 flex items-start gap-2 rounded-xl bg-success/10 p-3 text-xs">
               <ShieldCheck className="h-4 w-4 shrink-0 text-success" />

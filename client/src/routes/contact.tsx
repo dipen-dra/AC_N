@@ -103,16 +103,16 @@ function Contact() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1.5">Name *</label>
-                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
+                    <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your full name" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1.5">Email *</label>
-                    <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="your@email.com" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary" />
+                    <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="your@email.com" className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1.5">Subject *</label>
-                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary">
+                  <select value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
                     <option value="">Select a subject</option>
                     <option>Booking Issue</option>
                     <option>Service Enquiry</option>
@@ -123,9 +123,9 @@ function Contact() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1.5">Message *</label>
-                  <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={4} placeholder="Describe your query in detail..." className="w-full rounded-lg border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary resize-none" />
+                  <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} rows={4} placeholder="Describe your query in detail..." className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none" />
                 </div>
-                <button type="submit" disabled={sending} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-60 hover:bg-primary/90">
+                <button type="submit" disabled={sending} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground disabled:opacity-60 hover:bg-primary/90 transition-all shadow-soft">
                   {sending ? "Sending..." : <><Send className="h-4 w-4" /> Send Message</>}
                 </button>
               </form>

@@ -1,10 +1,11 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
-import { Building2, Clock, Mail, MapPin, Phone, Upload, Users, Save, Trash, Edit2 } from "lucide-react";
+import { Building2, Clock, Mail, MapPin, Phone, Upload, Users, Save, Trash, Edit2, Locate, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { getWorkshopDetails, updateWorkshopDetails } from "@/lib/db-server";
 import { ConfirmationModal } from "@/components/confirmation-modal";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 export const Route = createFileRoute("/admin/workshop")({
   beforeLoad: ({ context }) => {
@@ -126,7 +127,7 @@ function Workshop() {
               <Field label="Manager" value={ws.manager} onChange={(v) => handleFieldChange("manager", v)} />
               <Field label="Phone" value={ws.phone} icon={Phone} onChange={(v) => handleFieldChange("phone", v)} />
               <Field label="Email" value={ws.email} icon={Mail} onChange={(v) => handleFieldChange("email", v)} />
-              <Field label="Address" value={ws.address} icon={MapPin} onChange={(v) => handleFieldChange("address", v)} />
+              <Field label="Address" value={ws.address} icon={MapPin} onChange={(v) => handleFieldChange("address", v)} onLocationFetch={(loc) => { handleFieldChange("address", loc.address); if (loc.city) handleFieldChange("city", loc.city); }} />
               <Field label="City" value={ws.city} onChange={(v) => handleFieldChange("city", v)} />
             </div>
 
@@ -257,7 +258,7 @@ function Workshop() {
                 <input
                   value={newMember.name}
                   onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  className="mt-1 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                  className="mt-1 h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="e.g. Ramesh KC"
                   autoFocus
                 />
@@ -267,7 +268,7 @@ function Workshop() {
                 <input
                   value={newMember.role}
                   onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                  className="mt-1 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                  className="mt-1 h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   placeholder="e.g. Senior Technician"
                 />
               </label>
@@ -277,7 +278,7 @@ function Workshop() {
                   <input
                     value={newMember.phone}
                     onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                    className="mt-1 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                    className="mt-1 h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     placeholder="e.g. 9801234567"
                   />
                 </label>
@@ -286,7 +287,7 @@ function Workshop() {
                   <input
                     value={newMember.email}
                     onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                    className="mt-1 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                    className="mt-1 h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     placeholder="e.g. ramesh@autocare.np"
                   />
                 </label>
@@ -341,17 +342,37 @@ function Workshop() {
   );
 }
 
-function Field({ label, value, icon: Icon, onChange }: { label: string; value: string; icon?: any; onChange: (v: string) => void }) {
+function Field({ label, value, icon: Icon, onChange, onLocationFetch }: { label: string; value: string; icon?: any; onChange: (v: string) => void; onLocationFetch?: (loc: any) => void }) {
+  const { loading: geoLoading, fetchLocation } = useGeolocation();
+  const isAddress = label === "Address";
+
   return (
     <label className="block">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      <div className="mt-1 flex items-center gap-2 rounded-lg border border-border bg-background px-3">
+      <div className="relative mt-1 flex items-center gap-2 rounded-xl border border-border bg-background px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
         <input
           defaultValue={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 flex-1 bg-transparent text-sm outline-none"
+          className="h-12 flex-1 bg-transparent text-sm outline-none"
         />
+        {isAddress && (
+          <button
+            type="button"
+            onClick={async () => {
+              const loc = await fetchLocation();
+              if (loc?.address) {
+                if (onLocationFetch) onLocationFetch(loc);
+                else onChange(loc.address);
+              }
+            }}
+            disabled={geoLoading}
+            className="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
+            title="Use Current Location"
+          >
+            {geoLoading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Locate className="h-4 w-4" />}
+          </button>
+        )}
       </div>
     </label>
   );

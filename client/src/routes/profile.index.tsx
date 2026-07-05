@@ -1,8 +1,9 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { Camera, MapPin, Mail, Phone, User, CheckCircle2 } from "lucide-react";
+import { Camera, MapPin, Mail, Phone, User, CheckCircle2, Locate, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadAvatar, updateProfile } from "@/lib/auth-server";
+import { useGeolocation } from "@/hooks/use-geolocation";
 
 export const Route = createFileRoute("/profile/")({
   component: ProfileInfo,
@@ -20,6 +21,7 @@ function ProfileInfo() {
   const [phone, setPhone] = useState(user?.phone || "");
   const [address, setAddress] = useState(user?.address || "");
   const [isSaving, setIsSaving] = useState(false);
+  const { loading: geoLoading, fetchLocation } = useGeolocation();
 
   if (!user) return null;
 
@@ -149,7 +151,27 @@ function ProfileInfo() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Location Address</label>
-              <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. Kathmandu, Nepal" className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm shadow-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary" />
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={address} 
+                  onChange={(e) => setAddress(e.target.value)} 
+                  placeholder="e.g. Kathmandu, Nepal" 
+                  className="h-11 w-full rounded-xl border border-border bg-background px-4 pr-12 text-sm shadow-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary" 
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const loc = await fetchLocation();
+                    if (loc?.address) setAddress(loc.address);
+                  }}
+                  disabled={geoLoading}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors disabled:opacity-50"
+                  title="Use Current Location"
+                >
+                  {geoLoading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Locate className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
