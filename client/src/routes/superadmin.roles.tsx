@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { getUsers, updateUserRole, deleteUser } from "@/lib/db-server";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/superadmin/roles")({
   beforeLoad: ({ context }) => {
@@ -28,6 +29,7 @@ function Roles() {
   const router = useRouter();
   const [customers, setCustomers] = useState<any[]>(initial);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string, name: string } | null>(null);
 
   const rolesMeta = [
     { name: "Superadmin", perms: 42, desc: "Full control including role management and audit logs" },
@@ -142,21 +144,9 @@ function Roles() {
                         <option value="Superadmin">Superadmin</option>
                       </select>
                       <button
-                        onClick={async () => {
-                          if (confirm(`Are you sure you want to delete ${c.name}?`)) {
-                            setUpdating(c.id);
-                            const res = await deleteUser(c.id);
-                            if (res.success) {
-                              toast.success("User deleted.");
-                              router.invalidate();
-                            } else {
-                              toast.error(res.error || "Failed to delete user.");
-                            }
-                            setUpdating(null);
-                          }
-                        }}
+                        onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
                         disabled={updating === c.id}
-                        className="rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50"
+                        className="rounded-lg bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-50 cursor-pointer"
                       >
                         Delete
                       </button>
@@ -168,6 +158,45 @@ function Roles() {
           </table>
         </div>
       </div>
+
+      {/* Custom Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete User Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-semibold text-foreground">{deleteTarget?.name}</span>? This action cannot be undone and will permanently remove their profile and all associated bookings from the system.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-semibold hover:bg-secondary transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!deleteTarget) return;
+                const targetId = deleteTarget.id;
+                setDeleteTarget(null);
+                setUpdating(targetId);
+                const res = await deleteUser(targetId);
+                if (res.success) {
+                  toast.success("User deleted successfully.");
+                  router.invalidate();
+                } else {
+                  toast.error(res.error || "Failed to delete user.");
+                }
+                setUpdating(null);
+              }}
+              className="rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
+            >
+              Delete Account
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminShell>
   );
 }
