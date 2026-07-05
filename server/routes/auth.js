@@ -26,8 +26,6 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// In-memory password reset tokens (keyed by email) — expires 1 hour
-const resetTokens = new Map();
 
 // ========== REGISTER ==========
 router.post('/register', authLimiter, async (req, res) => {
@@ -676,8 +674,9 @@ router.post('/forgot', authLimiter, async (req, res) => {
     const user = await User.findOne({ email: sanitizedEmail });
     if (user) {
       const token = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit numeric OTP
-      const expires = Date.now() + 60 * 60 * 1000; // 1 hour
-      resetTokens.set(sanitizedEmail, { token, expires });
+      user.resetPasswordToken = token;
+      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await user.save();
       
       // Send dynamic password reset email
       await sendPasswordResetEmail(sanitizedEmail, token);
@@ -710,8 +709,8 @@ router.post('/reset', authLimiter, async (req, res) => {
     }
 
     const sanitizedEmail = Validation.sanitizeString(email).toLowerCase().trim();
-    const stored = resetTokens.get(sanitizedEmail);
-    if (!stored || stored.token !== token || Date.now() > stored.expires) {
+    const user = await User.findOne({ email: sanitizedEmail });
+    if (!user || user.resetPasswordToken !== token || !user.resetPasswordExpires || Date.now() > user.resetPasswordExpires.getTime()) {
       return res.status(400).json({ success: false, error: 'Invalid or expired reset token.' });
     }
 
@@ -722,23 +721,21 @@ router.post('/reset', authLimiter, async (req, res) => {
       });
     }
 
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const user = await User.findOneAndUpdate({ email: sanitizedEmail }, { passwordHash }, { new: true });
-    
-    resetTokens.delete(sanitizedEmail);
+    user.passwordHash = bcrypt.hashSync(password, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
 
-    if (user) {
-      await SecurityMonitor.logEvent({
-        userId: user.id,
-        userEmail: sanitizedEmail,
-        action: 'ADMIN_ACTION',
-        ip: req.ip || '-',
-        userAgent: req.headers['user-agent'] || '',
-        details: { action: 'RESET_COMPLETE' },
-        status: 'SUCCESS',
-        severity: 'info'
-      });
-    }
+    await SecurityMonitor.logEvent({
+      userId: user.id,
+      userEmail: sanitizedEmail,
+      action: 'ADMIN_ACTION',
+      ip: req.ip || '-',
+      userAgent: req.headers['user-agent'] || '',
+      details: { action: 'RESET_COMPLETE' },
+      status: 'SUCCESS',
+      severity: 'info'
+    });
 
     res.json({ success: true, message: 'Password reset successful. You can now log in.' });
   } catch (err) {
