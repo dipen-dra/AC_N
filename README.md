@@ -119,70 +119,46 @@ graph TD
 
 ---
 
-## 🚀 Setup & Installation (From Scratch)
+## 🚀 Setup & Installation
 
-Follow these steps to set up and run the application locally on your machine:
+### 1. Configure the Environment
+Create a `.env` file in the `/server` directory:
+```env
+PORT=5001
+MONGO_URI=mongodb://127.0.0.1:27017/autocare_nepal
+JWT_SECRET=autocare_secret_key_123456
+NODE_ENV=development
 
-### 1. Prerequisites
-Ensure you have the following software installed:
-* **Node.js** (v18 or higher recommended)
-* **MongoDB Community Server** (running locally on default port `27017`)
-* **npm** (comes pre-packed with Node.js)
-
----
-
-### 2. Step-by-Step Setup
-
-#### Step A: Clone and Navigate
-Clone your repository to your local workspace and navigate into the root directory:
-```bash
-git clone https://github.com/dipen-dra/AC_N.git
-cd AC_N
+# Email (SMTP Configuration)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM="AutoCare Nepal" <no-reply@autocare.com.np>
 ```
 
-#### Step B: Configure Environment Variables
-1. Navigate to the `server` directory.
-2. Copy the `.env.example` file to create your active `.env` file:
-   ```bash
-   cp server/.env.example server/.env
-   ```
-3. Open `server/.env` and update the variables if necessary. The default configuration connects to your local MongoDB instance at `mongodb://127.0.0.1:27017/autocare_nepal`.
-
-#### Step C: Install Dependencies
-Run the installation script in the project root folder. This single command installs packages concurrently for the root script runner, backend `/server`, and frontend `/client`:
+### 2. Install Project Dependencies
+Run this command in the project root directory to automatically install packages for the root, frontend client, and backend server:
 ```bash
 npm run install:all
 ```
 
----
-
-### 3. Launching the System & Data Seeding
-
-#### Step A: Start the Development Server
-Run the concurrent dev script from the project root:
+### 3. Launch Development Mode & Auto-Seeding
+Launch both servers concurrently with a single command:
 ```bash
 npm run dev
 ```
-This launches:
-* **React Client SPA (Vite)**: Hosted at [http://localhost:5173](http://localhost:5173)
-* **REST API Server (Express)**: Hosted at [http://localhost:5001](http://localhost:5001)
+* **Vite Frontend Dev Host**: `http://localhost:5173/` (reverse proxied `/api` to port 5001)
+* **Express API Host**: `http://localhost:5001/`
 
-#### Step B: Automatic Database Seeding
-Upon connecting to MongoDB for the first time:
-1. The system checks if core databases (services and admin users) are seeded.
-2. If the total number of bookings in the database is less than 5, **the server automatically seeds 6 months of historical customer data, 70+ bookings, and 30+ audit logs**!
-3. This guarantees your dashboard charts, weekly trends, revenue lists, and security audit logs populate with rich historical visuals instantly on start.
+Upon the first server launch, if the database is blank (i.e. contains `< 5` bookings), the system will **automatically seed 6 months of historical dashboard data** (70+ bookings, customers, and audit logs) so the analytics and security panels render immediately with complete growth metrics.
 
----
-
-### 4. Database Controls (Optional)
-
-#### Force-Reset & Re-Seed
-If you ever want to completely clean your local MongoDB instance and trigger a fresh re-seed of the 6-month historical database, run this Node utility script from the project root:
+### 4. Force-Reset & Re-Seed Database (Optional)
+If you wish to wipe the database and trigger a fresh re-seed of the historical datasets, execute the following Node.js script in the `/server` folder:
 ```bash
-node -e 'const mongoose = require("mongoose"); mongoose.connect("mongodb://127.0.0.1:27017/autocare_nepal").then(async () => { await mongoose.connection.db.collection("bookings").deleteMany({}); await mongoose.connection.db.collection("users").deleteMany({ role: "Customer" }); await mongoose.connection.db.collection("auditlogs").deleteMany({}); console.log("Database cleared successfully."); process.exit(0); });'
+node -e 'const mongoose = require("mongoose"); mongoose.connect("mongodb://127.0.0.1:27017/autocare_nepal").then(async () => { await mongoose.connection.db.collection("bookings").deleteMany({}); await mongoose.connection.db.collection("users").deleteMany({ role: "Customer" }); await mongoose.connection.db.collection("auditlogs").deleteMany({}); console.log("Database cleared. Please restart backend to re-seed."); process.exit(0); });'
 ```
-After executing this, restart your development server (`npm run dev`) and the backend will seed all databases fresh!
+Once cleared, restart your development server (`npm run dev`) to invoke the seeder.
 
 ---
 
