@@ -26,6 +26,23 @@ const userSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  address: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  vehicles: [{
+    plate: String,
+    model: String,
+    primary: { type: Boolean, default: false }
+  }],
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
+  },
+  twoFactorSecret: {
+    type: String
+  },
   passwordHash: {
     type: String,
     required: true

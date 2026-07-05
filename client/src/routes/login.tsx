@@ -29,9 +29,19 @@ function Login() {
     try {
       const result = await loginUser({ data: { email, password } });
       if (result.success) {
-        toast.success("Successfully logged in!");
-        await router.invalidate(); // Invalidate the router cache to reload root loader (getCurrentUser)
-        navigate({ to: "/" });
+        if (result.requiresTwoFactor) {
+          toast.success("Please complete two-factor authentication.");
+          sessionStorage.setItem("temp2FAToken", result.tempToken);
+          navigate({ to: "/auth/two-factor" });
+        } else {
+          toast.success("Successfully logged in!");
+          await router.invalidate(); // Invalidate the router cache to reload root loader (getCurrentUser)
+          if (result.user?.role === "Admin" || result.user?.role === "Superadmin" || result.user?.role === "SuperAdmin") {
+            navigate({ to: "/admin" });
+          } else {
+            navigate({ to: "/" });
+          }
+        }
       } else {
         toast.error(result.error || "Login failed. Please check your credentials.");
       }

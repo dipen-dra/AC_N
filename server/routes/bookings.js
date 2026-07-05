@@ -1,6 +1,7 @@
 const express = require("express");
 const Booking = require("../models/Booking");
 const AuditLog = require("../models/AuditLog");
+const Workshop = require("../models/Workshop");
 const { requireAuth, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
@@ -42,6 +43,34 @@ router.post("/", requireAuth, async (req, res) => {
     if (!service || !vehicle || !date || !time || !location || !price) {
       return res.status(400).json({ error: "All booking fields are required." });
     }
+    
+    let assignedTechnician = req.body.technician || "-";
+
+    if (assignedTechnician && assignedTechnician !== "-" && assignedTechnician !== "Any Available Mechanic") {
+      const conflict = await Booking.findOne({
+        technician: assignedTechnician,
+        date,
+        time,
+        status: { $ne: "Cancelled" }
+      });
+      if (conflict) {
+        return res.status(400).json({ error: "Mechanic isn't available in their current time." });
+      }
+    }
+
+    // Verify physical bays capacity
+    const workshop = await Workshop.findOne();
+    const baysCount = workshop ? (workshop.baysCount || 12) : 12;
+    
+    const concurrentBookings = await Booking.countDocuments({
+      date,
+      time,
+      status: { $ne: "Cancelled" }
+    });
+    
+    if (concurrentBookings >= baysCount) {
+      return res.status(400).json({ error: "All service bays are fully booked at this time." });
+    }
 
     const randomNum = Math.floor(100000 + Math.random() * 900000);
     const dateFormatted = date.replace(/-/g, "");
@@ -59,7 +88,7 @@ router.post("/", requireAuth, async (req, res) => {
       location,
       price,
       status: "Upcoming",
-      technician: "-",
+      technician: assignedTechnician,
       eta: ""
     });
     await newBooking.save();
@@ -90,6 +119,25 @@ router.post("/", requireAuth, async (req, res) => {
       severity: "info"
     });
     await log.save();
+
+    const Notification = require("../models/Notification");
+    // Notify Customer
+    await new Notification({
+      userId: req.user.id,
+      title: "Booking Confirmed",
+      message: `Your booking for ${service} on ${date} has been confirmed.`,
+      type: "booking",
+      relatedId: bookingId
+    }).save();
+
+    // Broadcast to Admins
+    await new Notification({
+      userId: "admin_broadcast",
+      title: "New Booking Received",
+      message: `${req.user.name} booked ${service} for ${date} at ${time}.`,
+      type: "booking",
+      relatedId: bookingId
+    }).save();
 
     res.json({ success: true, booking: newBooking });
   } catch (err) {
@@ -125,6 +173,17 @@ router.patch("/:id/status", requireAuth, requireRole(["Admin", "Superadmin"]), a
       severity: "info"
     });
     await log.save();
+
+    if (status) {
+      const Notification = require("../models/Notification");
+      await new Notification({
+        userId: booking.userId,
+        title: "Booking Update",
+        message: `Your booking ${booking.id} status is now ${status}.`,
+        type: "booking",
+        relatedId: booking.id
+      }).save();
+    }
 
     res.json({ success: true, booking });
   } catch (err) {

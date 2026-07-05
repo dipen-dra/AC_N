@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { getBookings, updateBookingStatus } from "@/lib/db-server";
+import { exportToCSV } from "@/lib/export";
 import { StatusPill } from "./admin.index";
 
 export const Route = createFileRoute("/admin/bookings")({
@@ -85,6 +86,21 @@ function AdminBookings() {
   // Derive unique services for the filter dropdown
   const uniqueServices = Array.from(new Set(bookings.map((b: any) => b.service))) as string[];
 
+  const handleExport = () => {
+    const exportData = filteredBookings.map((b: any) => ({
+      ID: b.id,
+      Customer: b.customer,
+      Vehicle: b.vehicle,
+      Service: b.service,
+      Date: b.date,
+      Time: b.time,
+      Status: b.status,
+      Price_NPR: b.price,
+      Technician: b.technician || "Unassigned"
+    }));
+    exportToCSV(exportData, `bookings_${new Date().toISOString().split('T')[0]}`);
+  };
+
   return (
     <AdminShell>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -93,7 +109,7 @@ function AdminBookings() {
           <p className="text-sm text-muted-foreground">All customer bookings and service orders.</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => toast.info("Export CSV is not configured, but table details can be copied.")} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-secondary cursor-pointer"><Download className="h-4 w-4" /> Export CSV</button>
+          <button onClick={handleExport} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold hover:bg-secondary cursor-pointer"><Download className="h-4 w-4" /> Export CSV</button>
         </div>
       </div>
 

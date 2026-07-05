@@ -60,26 +60,66 @@ router.post("/", requireAuth, async (req, res) => {
 
     // Customer first message auto-response bot simulation if needed
     if (senderRole === "Customer") {
-      const msgCount = await ChatMessage.countDocuments({ userEmail: req.user.email });
-      if (msgCount === 1) {
-        // Trigger automated bot welcome message
-        setTimeout(async () => {
-          try {
+      // Process AI auto-reply asynchronously
+      setTimeout(async () => {
+        try {
+          // Fetch up to last 10 messages for context
+          const history = await ChatMessage.find({ userEmail: req.user.email })
+            .sort({ _id: -1 })
+            .limit(10);
+          
+          const apiMessages = [
+            { 
+              role: "system", 
+              content: "You are the AutoCare Nepal AI Assistant. You help customers with vehicle service bookings, tracking, and general inquiries. Be concise, polite, and helpful." 
+            }
+          ];
+
+          history.reverse().forEach(msg => {
+            apiMessages.push({
+              role: msg.senderRole === "Customer" ? "user" : "assistant",
+              content: msg.text
+            });
+          });
+
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              "HTTP-Referer": "http://localhost:5173",
+              "X-Title": "AutoCare Nepal",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "openai/gpt-4o",
+              messages: apiMessages
+            })
+          });
+
+          if (!response.ok) {
+            console.error("OpenRouter API error:", response.statusText);
+            return;
+          }
+
+          const data = await response.json();
+          const replyText = data.choices?.[0]?.message?.content;
+
+          if (replyText) {
             const botMessage = new ChatMessage({
               userEmail: req.user.email,
               senderEmail: "bot@autocare.np",
               senderName: "AI Assistant",
               senderRole: "bot",
-              text: "Hello! 👋 I'm your AutoCare AI Assistant. An agent has been notified and will join shortly. How can I help you today?",
+              text: replyText,
               time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
               read: false
             });
             await botMessage.save();
-          } catch (err) {
-            console.error("Bot auto-reply failed:", err);
           }
-        }, 1000);
-      }
+        } catch (err) {
+          console.error("AI auto-reply failed:", err);
+        }
+      }, 0);
     }
 
     res.json({ success: true, message: newMessage });

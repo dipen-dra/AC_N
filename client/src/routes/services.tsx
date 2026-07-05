@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Clock, MapPin, Search, ShieldCheck, Star, Wrench, Droplet, Disc, Cog, Snowflake, Sparkles, Check } from "lucide-react";
 import { AppShell, PageHeader } from "@/components/app-shell";
@@ -12,7 +13,23 @@ export const Route = createFileRoute("/services")({
 const iconMap: Record<string, any> = { wrench: Wrench, droplet: Droplet, disc: Disc, cog: Cog, snowflake: Snowflake, sparkles: Sparkles };
 
 function Services() {
-  const services = Route.useLoaderData();
+  const initialServices = Route.useLoaderData();
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("Popular");
+
+  const services = useMemo(() => {
+    let filtered = initialServices.filter((s: any) => 
+      s.name.toLowerCase().includes(search.toLowerCase()) || 
+      s.desc.toLowerCase().includes(search.toLowerCase())
+    );
+    return filtered.sort((a: any, b: any) => {
+      if (sort === "Price low → high") return a.price - b.price;
+      if (sort === "Price high → low") return b.price - a.price;
+      if (sort === "Rating") return b.rating - a.rating;
+      return 0;
+    });
+  }, [initialServices, search, sort]);
+
   return (
     <AppShell>
       <PageHeader title="Choose the Right Service for Your Vehicle" subtitle="Professional care for your vehicle. Transparent pricing, trusted by thousands." />
@@ -24,19 +41,28 @@ function Services() {
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input placeholder="Search services..." className="h-11 w-72 rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" />
+              <input 
+                placeholder="Search services..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-11 w-72 rounded-lg border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" 
+              />
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Sort by:</span>
-            <select className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium outline-none focus:border-primary">
+            <select 
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium outline-none focus:border-primary"
+            >
               <option>Popular</option><option>Price low → high</option><option>Price high → low</option><option>Rating</option>
             </select>
           </div>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          {services.map((s) => {
+          {services.map((s: any) => {
             const Icon = iconMap[s.icon] ?? Wrench;
             return (
               <div key={s.id} className="flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-elevated">

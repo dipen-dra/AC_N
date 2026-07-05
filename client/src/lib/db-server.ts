@@ -10,6 +10,16 @@ export const getServices = async () => {
   }
 };
 
+export const globalSearch = async (query: string) => {
+  try {
+    const response = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) return [];
+    return await response.json();
+  } catch (error) {
+    return [];
+  }
+};
+
 // 2. Get All Bookings (Client API Fetcher)
 export const getBookings = async () => {
   try {
@@ -324,5 +334,31 @@ export const updateWorkshopDetails = async (data: any) => {
   } catch (error) {
     console.error("Error in updateWorkshopDetails:", error);
     return { success: false, error: "Update failed." };
+  }
+};
+
+// 22. Get Admin Settings (Client API Fetcher)
+export const getAdminSettings = async () => {
+  try {
+    const response = await fetch("/api/admin/settings");
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.error("Error in getAdminSettings:", error);
+    return null;
+  }
+};
+
+// 23. Update Admin Settings (Client API Fetcher)
+export const updateAdminSettings = async (data: any) => {
+  try {
+    const response = await fetch("/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: "Failed to update settings." };
   }
 };

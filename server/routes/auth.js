@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
 const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
@@ -226,6 +228,19 @@ router.post('/login', authLimiter, async (req, res) => {
       });
     }
 
+    if (user.twoFactorEnabled) {
+      const tempToken = jwt.sign(
+        { tempId: user.id, tempDbId: user._id, is2FA: true }, 
+        JWT_SECRET, 
+        { expiresIn: '5m' }
+      );
+      return res.json({
+        success: true,
+        requiresTwoFactor: true,
+        tempToken
+      });
+    }
+
     // Update lastLogin
     user.lastLogin = new Date();
     await user.save();
@@ -251,8 +266,7 @@ router.post('/login', authLimiter, async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      domain: process.env.COOKIE_DOMAIN || undefined
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     res.json({
@@ -267,7 +281,8 @@ router.post('/login', authLimiter, async (req, res) => {
         initial: user.initial,
         status: user.status,
         role: user.role,
-        avatar: user.avatar || null
+        avatar: user.avatar || null,
+        twoFactorEnabled: user.twoFactorEnabled || false
       }
     });
 
@@ -277,6 +292,98 @@ router.post('/login', authLimiter, async (req, res) => {
       success: false, 
       error: 'Login failed. Please try again.' 
     });
+  }
+});
+
+// ========== VERIFY 2FA FOR LOGIN ==========
+router.post('/login/verify-2fa', authLimiter, async (req, res) => {
+  try {
+    const { tempToken, otp } = req.body;
+    if (!tempToken || !otp) return res.status(400).json({ success: false, error: 'Token and OTP are required' });
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ success: false, error: 'Session expired. Please log in again.' });
+    }
+    const user = await User.findById(decoded.tempDbId);
+    if (!user || !user.twoFactorEnabled) return res.status(401).json({ success: false, error: 'Invalid request' });
+    
+    const isValid = speakeasy.totp.verify({ secret: user.twoFactorSecret, encoding: 'base32', token: otp });
+    if (!isValid) return res.status(401).json({ success: false, error: 'Invalid verification code' });
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    const token = jwt.sign(
+      { id: user.id, dbId: user._id, role: user.role }, 
+      JWT_SECRET, 
+      { expiresIn: '7d' }
+    );
+    res.cookie('auth_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        twoFactorEnabled: user.twoFactorEnabled || false
+      }
+    });
+  } catch (err) {
+    console.error('Verify 2FA error:', err);
+    res.status(500).json({ success: false, error: 'Verification failed' });
+  }
+});
+
+// ========== 2FA MANAGEMENT ==========
+router.post('/2fa/generate', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const secret = speakeasy.generateSecret({ name: 'AutoCare Nepal (' + user.email + ')' });
+    const qrCode = await qrcode.toDataURL(secret.otpauth_url);
+    res.json({ success: true, secret: secret.base32, qrCode });
+  } catch (err) {
+    console.error('Generate 2FA error:', err);
+    res.status(500).json({ success: false, error: 'Failed to generate 2FA' });
+  }
+});
+
+router.post('/2fa/enable', requireAuth, async (req, res) => {
+  try {
+    const { secret, token } = req.body;
+    const isValid = speakeasy.totp.verify({ secret, encoding: 'base32', token });
+    if (!isValid) return res.status(400).json({ success: false, error: 'Invalid token' });
+    const user = await User.findById(req.user._id);
+    user.twoFactorSecret = secret;
+    user.twoFactorEnabled = true;
+    await user.save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Enable 2FA error:', err);
+    res.status(500).json({ success: false, error: 'Failed to enable 2FA' });
+  }
+});
+
+router.post('/2fa/disable', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user._id);
+    const isValid = speakeasy.totp.verify({ secret: user.twoFactorSecret, encoding: 'base32', token });
+    if (!isValid) return res.status(400).json({ success: false, error: 'Invalid token' });
+    user.twoFactorSecret = undefined;
+    user.twoFactorEnabled = false;
+    await user.save();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Disable 2FA error:', err);
+    res.status(500).json({ success: false, error: 'Failed to disable 2FA' });
   }
 });
 
@@ -297,8 +404,7 @@ router.post('/logout', async (req, res) => {
   res.clearCookie('auth_session', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    domain: process.env.COOKIE_DOMAIN || undefined
+    sameSite: 'lax'
   });
   
   res.json({ success: true, message: 'Logged out successfully' });
@@ -315,6 +421,10 @@ router.get('/me', requireAuth, async (req, res) => {
       });
     }
 
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     res.json({
       success: true,
       user: {
@@ -322,12 +432,15 @@ router.get('/me', requireAuth, async (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
+        address: user.address,
+        vehicles: user.vehicles,
         points: user.points,
         tier: user.tier,
         initial: user.initial,
         status: user.status,
         role: user.role,
-        avatar: user.avatar || null
+        avatar: user.avatar || null,
+        twoFactorEnabled: user.twoFactorEnabled || false
       }
     });
 
@@ -337,6 +450,50 @@ router.get('/me', requireAuth, async (req, res) => {
       success: false, 
       error: 'Failed to get user data.' 
     });
+  }
+});
+
+// ========== UPDATE PROFILE ==========
+router.post('/profile', requireAuth, async (req, res) => {
+  try {
+    const { phone, address } = req.body;
+    const user = await User.findById(req.user._id);
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    await user.save();
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to update profile.' });
+  }
+});
+
+// ========== ADD VEHICLE ==========
+router.post('/vehicles', requireAuth, async (req, res) => {
+  try {
+    const { plate, model } = req.body;
+    if (!plate || !model) return res.status(400).json({ error: 'Plate and model are required.' });
+    const user = await User.findById(req.user._id);
+    const isPrimary = user.vehicles.length === 0;
+    user.vehicles.push({ plate, model, primary: isPrimary });
+    await user.save();
+    res.json({ success: true, vehicles: user.vehicles });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to add vehicle.' });
+  }
+});
+
+// ========== REMOVE VEHICLE ==========
+router.delete('/vehicles/:plate', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.vehicles = user.vehicles.filter(v => v.plate !== req.params.plate);
+    if (user.vehicles.length > 0 && !user.vehicles.some(v => v.primary)) {
+      user.vehicles[0].primary = true;
+    }
+    await user.save();
+    res.json({ success: true, vehicles: user.vehicles });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to remove vehicle.' });
   }
 });
 
@@ -425,25 +582,63 @@ router.post('/avatar', requireAuth, upload.single('avatar'), async (req, res) =>
 // ========== GET NOTIFICATIONS ==========
 router.get('/notifications', requireAuth, async (req, res) => {
   try {
-    const Booking = require("../models/Booking");
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const bookings = await Booking.find({
-      userId: req.user.id,
-      updatedAt: { $gte: since }
-    }).sort({ updatedAt: -1 }).limit(10);
+    const Notification = require("../models/Notification");
+    const isAdmin = req.user.role === "Admin" || req.user.role === "Superadmin";
+    const userQuery = isAdmin ? { userId: { $in: [req.user.id, "admin_broadcast"] } } : { userId: req.user.id };
+    
+    const notifications = await Notification.find(userQuery)
+      .sort({ createdAt: -1 })
+      .limit(20);
 
-    const notifications = bookings.map(b => ({
-      id: b.id,
-      title: `Booking ${b.id}`,
-      message: `Status: ${b.status}`,
-      time: b.updatedAt,
-      read: false
+    const unreadCount = await Notification.countDocuments({ ...userQuery, read: false });
+
+    const formatted = notifications.map(n => ({
+      id: n._id.toString(),
+      title: n.title,
+      message: n.message,
+      time: n.createdAt,
+      read: n.read,
+      type: n.type,
+      relatedId: n.relatedId
     }));
 
-    res.json({ success: true, count: notifications.length, notifications });
+    res.json({ success: true, count: unreadCount, notifications: formatted });
   } catch (err) {
     console.error("Notifications error:", err);
     res.json({ success: true, count: 0, notifications: [] });
+  }
+});
+
+// ========== MARK NOTIFICATIONS READ ==========
+router.patch('/notifications/read', requireAuth, async (req, res) => {
+  try {
+    const Notification = require("../models/Notification");
+    const isAdmin = req.user.role === "Admin" || req.user.role === "Superadmin";
+    const userQuery = isAdmin ? { userId: { $in: [req.user.id, "admin_broadcast"] } } : { userId: req.user.id };
+
+    await Notification.updateMany(
+      { ...userQuery, read: false },
+      { $set: { read: true } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Mark read error:", err);
+    res.status(500).json({ error: "Failed to mark as read" });
+  }
+});
+
+// ========== CLEAR NOTIFICATIONS ==========
+router.delete('/notifications', requireAuth, async (req, res) => {
+  try {
+    const Notification = require("../models/Notification");
+    const isAdmin = req.user.role === "Admin" || req.user.role === "Superadmin";
+    const userQuery = isAdmin ? { userId: { $in: [req.user.id, "admin_broadcast"] } } : { userId: req.user.id };
+    
+    await Notification.deleteMany(userQuery);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Clear notifications error:", err);
+    res.status(500).json({ error: "Failed to clear notifications" });
   }
 });
 

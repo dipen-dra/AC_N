@@ -22,6 +22,7 @@ function Analytics() {
   const summary = data?.summary || { completedRevenue: 0, totalBookings: 0, customerCount: 0 };
   const rData = data?.revenueData || [];
   const sMix = data?.serviceMix || [];
+  const topTechs = data?.topTechnicians || [];
 
   return (
     <AdminShell>
@@ -30,15 +31,15 @@ function Analytics() {
         <p className="text-sm text-muted-foreground">Deep dive into performance, revenue and customer insights.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Gross revenue" value={`Rs. ${summary.completedRevenue.toLocaleString()}`} delta="14.2%" icon={DollarSign} tone="success" />
-        <StatCard label="Total bookings" value={summary.totalBookings.toString()} delta="4.6%" icon={TrendingUp} tone="primary" />
-        <StatCard label="Total customers" value={summary.customerCount.toString()} delta="12.9%" icon={Users} tone="info" />
-        <StatCard label="Avg. rating" value="4.8/5" delta="0.2" icon={Star} tone="warning" />
+        <StatCard label="Gross revenue" value={`Rs. ${summary.completedRevenue.toLocaleString()}`} delta={summary.revenueDelta} icon={DollarSign} tone="success" />
+        <StatCard label="Total bookings" value={summary.totalBookings.toString()} delta={summary.bookingsDelta} icon={TrendingUp} tone="primary" />
+        <StatCard label="Total customers" value={summary.customerCount.toString()} delta={summary.customersDelta} icon={Users} tone="info" />
+        <StatCard label="Services live" value={String(summary.servicesCount || 0)} icon={Star} tone="warning" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="text-lg font-bold">Revenue over time</div>
+          <div className="text-lg font-bold">Revenue Over Time</div>
           <div className="mt-4 h-72">
             <ResponsiveContainer>
               <AreaChart data={rData}>
@@ -58,12 +59,12 @@ function Analytics() {
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="text-lg font-bold">Service mix</div>
+          <div className="text-lg font-bold">Service Mix</div>
           <div className="mt-4 h-72">
             <ResponsiveContainer>
               <PieChart>
                 <Pie data={sMix} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90}>
-                  {sMix.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  {sMix.map((_: any, i: any) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
                 <Legend />
@@ -75,32 +76,29 @@ function Analytics() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="text-lg font-bold">Bookings by day</div>
+          <div className="text-lg font-bold">Bookings By Day</div>
           <div className="mt-4 h-64">
             <ResponsiveContainer>
-              <BarChart data={rData}>
+              <BarChart data={summary.weeklyBookings || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
-                <Bar dataKey="bookings" fill="#0891b2" radius={[8, 8, 0, 0]} />
+                <XAxis dataKey="d" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
+                <Bar dataKey="v" fill="#0891b2" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         <div className="rounded-2xl border border-border bg-card p-6">
-          <div className="text-lg font-bold">Top performing technicians</div>
+          <div className="text-lg font-bold">Top Performing Technicians</div>
           <div className="mt-4 divide-y divide-border">
-            {[
-              { n: "Ramesh KC", j: 48, r: 4.9 },
-              { n: "Bijay Shrestha", j: 42, r: 4.8 },
-              { n: "Suman Rai", j: 39, r: 4.7 },
-              { n: "Sabin Karki", j: 31, r: 4.6 },
-            ].map((t) => (
+            {topTechs.length === 0 ? (
+              <div className="py-4 text-center text-sm text-muted-foreground">No technician data available.</div>
+            ) : topTechs.map((t: any) => (
               <div key={t.n} className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary">{t.n[0]}</div>
                   <div>
                     <div className="font-semibold">{t.n}</div>
-                    <div className="text-xs text-muted-foreground">{t.j} jobs this month</div>
+                    <div className="text-xs text-muted-foreground">{t.j} jobs overall</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 text-sm font-semibold"><Star className="h-4 w-4 fill-warning text-warning" /> {t.r}</div>

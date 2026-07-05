@@ -251,9 +251,9 @@ function AdminChats() {
                   <button
                     key={email}
                     onClick={() => setActiveEmail(email)}
-                    className={`flex w-full items-start gap-3 border-b border-border p-4 text-left hover:bg-secondary/50 cursor-pointer ${activeEmail === email ? "bg-primary-soft/60" : ""}`}
+                    className={`flex w-full items-start gap-3 border-b border-border p-4 text-left hover:bg-secondary/50 transition-colors cursor-pointer ${activeEmail === email ? "bg-primary/5 border-l-2 border-l-primary" : "border-l-2 border-l-transparent"}`}
                   >
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary font-bold text-sm">{email[0].toUpperCase()}</div>
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary font-bold text-sm text-secondary-foreground">{email[0].toUpperCase()}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
                         <div className="truncate font-semibold text-sm">{email}</div>
@@ -297,19 +297,24 @@ function AdminChats() {
               </header>
               <div ref={bottomRef} className="flex-1 space-y-4 overflow-y-auto p-6">
                 {threadMsgs.map((m: any, i: number) => {
-                  const isAdmin = m.senderRole === "Admin";
+                  const isAdmin = m.senderRole !== "Customer";
+                  const isImage = m.text.startsWith("data:image/");
                   return (
                     <div key={m._id || i} className={`flex items-end gap-2 ${isAdmin ? "flex-row-reverse" : ""}`}>
-                      {!isAdmin && <div className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-xs font-bold text-muted-foreground">{m.senderEmail?.[0]?.toUpperCase() || "C"}</div>}
-                      <div className={`max-w-md rounded-2xl px-4 py-2.5 text-sm ${isAdmin ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-secondary"}`}>
+                      {!isAdmin && <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-xs font-bold text-muted-foreground">{m.senderEmail?.[0]?.toUpperCase() || "C"}</div>}
+                      <div className={cn(
+                        "max-w-[75%] text-sm shadow-sm",
+                        isAdmin ? "rounded-2xl rounded-br-sm bg-primary text-primary-foreground" : "rounded-2xl rounded-bl-sm bg-secondary text-secondary-foreground",
+                        isImage ? "p-1" : "px-4 py-2.5"
+                      )}>
                         {m.text.startsWith("data:") ? (
-                          m.text.startsWith("data:image/") ? (
-                            <img src={m.text} alt="Uploaded attachment" className="max-w-[240px] max-h-[200px] rounded-lg object-cover" />
+                          isImage ? (
+                            <img src={m.text} alt="Uploaded attachment" className="max-w-[280px] max-h-[280px] rounded-xl object-cover" />
                           ) : (
-                            <a href={m.text} download="attachment" className={cn(isAdmin ? "text-white underline" : "text-primary underline", "flex items-center gap-1")}>Download attachment</a>
+                            <a href={m.text} download="attachment" className={cn(isAdmin ? "text-white underline" : "text-primary underline", "flex items-center gap-1 p-2")}>Download attachment</a>
                           )
                         ) : (
-                          m.text
+                          <div className="whitespace-pre-wrap break-words">{m.text}</div>
                         )}
                       </div>
                     </div>

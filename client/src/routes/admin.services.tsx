@@ -30,6 +30,12 @@ function AdminServices() {
   const [saving, setSaving] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<any | null>(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil(services.length / itemsPerPage);
+  const paginatedServices = services.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const handleOpenAdd = () => {
     setForm(emptyForm);
     setEditingId(null);
@@ -143,12 +149,12 @@ function AdminServices() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {services.length === 0 ? (
+        {paginatedServices.length === 0 ? (
           <div className="col-span-3 rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground">
             No services found. Click "Add service" to create one.
           </div>
         ) : (
-          services.map((s) => (
+          paginatedServices.map((s) => (
             <div key={s.id || s._id} className="flex flex-col rounded-2xl border border-border bg-card p-5">
               <div className="flex items-start gap-3">
                 <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-soft text-primary"><Wrench className="h-6 w-6" /></div>
@@ -178,6 +184,30 @@ function AdminServices() {
           ))
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-border pt-4 text-sm">
+          <div className="text-muted-foreground">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, services.length)} of {services.length} services
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-secondary disabled:opacity-50 cursor-pointer"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-md border border-border bg-card px-3 py-1.5 hover:bg-secondary disabled:opacity-50 cursor-pointer"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       <ConfirmationModal
         isOpen={!!serviceToDelete}

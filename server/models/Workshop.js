@@ -25,10 +25,10 @@ const workshopSchema = new mongoose.Schema({
   team: {
     type: Array,
     default: [
-      { n: "Ramesh KC", r: "Senior Technician" },
-      { n: "Bijay Shrestha", r: "AC Specialist" },
-      { n: "Suman Rai", r: "Lubrication Expert" },
-      { n: "Sabin Karki", r: "Manager" }
+      { id: "M-1", name: "Ramesh KC", role: "Senior Technician", phone: "9801111111", email: "ramesh@autocare.np" },
+      { id: "M-2", name: "Bijay Shrestha", role: "AC Specialist", phone: "9802222222", email: "bijay@autocare.np" },
+      { id: "M-3", name: "Suman Rai", role: "Lubrication Expert", phone: "9803333333", email: "suman@autocare.np" },
+      { id: "M-4", name: "Sabin Karki", role: "Manager", phone: "9804444444", email: "sabin@autocare.np" }
     ]
   },
   baysCount: { type: Number, default: 12 }

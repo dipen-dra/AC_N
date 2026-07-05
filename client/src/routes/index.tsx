@@ -46,7 +46,10 @@ function Home() {
               <Link to="/book" className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground shadow-soft hover:bg-primary/90">
                 Book a Service <ArrowRight className="h-4 w-4" />
               </Link>
-              <button className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-6 py-3.5 text-sm font-semibold hover:bg-accent">
+              <button 
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-6 py-3.5 text-sm font-semibold hover:bg-accent"
+              >
                 <PlayCircle className="h-4 w-4 text-primary" /> How It Works
               </button>
             </div>
@@ -119,7 +122,7 @@ function Home() {
       </section>
 
       {/* How it Works / Workflow */}
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+      <section id="how-it-works" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
         <div className="text-center max-w-3xl mx-auto mb-10">
           <div className="text-xs font-semibold uppercase tracking-wider text-primary">Simple & Seamless</div>
           <h2 className="mt-1 text-3xl font-extrabold sm:text-4xl">How AutoCare Works</h2>

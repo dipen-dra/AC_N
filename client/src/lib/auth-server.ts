@@ -8,13 +8,23 @@ export interface User {
   initial: string;
   status: string;
   role: string;
-  avatar: string | null;
+  avatar?: string | null;
+  address?: string;
+  vehicles?: { plate: string; model: string; primary: boolean }[];
+  twoFactorEnabled?: boolean;
 }
 
 // 1. Get Current User (Client API Fetcher)
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch("/api/auth/me", {
+      cache: "no-store",
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      }
+    });
     if (!response.ok) return null;
     const result = await response.json();
     return result.user || null;
@@ -93,5 +103,108 @@ export const getNotifications = async (): Promise<{ count: number; notifications
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return { count: 0, notifications: [] };
+  }
+};
+
+export const markNotificationsAsRead = async (): Promise<{ success: boolean }> => {
+  try {
+    const res = await fetch("/api/auth/notifications/read", { method: "PATCH" });
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
+export const clearNotifications = async (): Promise<{ success: boolean }> => {
+  try {
+    const res = await fetch("/api/auth/notifications", { method: "DELETE" });
+    return await res.json();
+  } catch (error) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
+export const updateProfile = async (data: { phone?: string; address?: string }): Promise<{ success: boolean; user?: User; error?: string }> => {
+  try {
+    const res = await fetch("/api/auth/profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const addVehicle = async (plate: string, model: string): Promise<{ success: boolean; vehicles?: any[]; error?: string }> => {
+  try {
+    const res = await fetch("/api/auth/vehicles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plate, model })
+    });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const removeVehicle = async (plate: string): Promise<{ success: boolean; vehicles?: any[]; error?: string }> => {
+  try {
+    const res = await fetch(`/api/auth/vehicles/${encodeURIComponent(plate)}`, { method: "DELETE" });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const generate2FA = async (): Promise<{ success: boolean; secret?: string; qrCode?: string; error?: string }> => {
+  try {
+    const res = await fetch("/api/auth/2fa/generate", { method: "POST" });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const enable2FA = async (secret: string, token: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch("/api/auth/2fa/enable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret, token })
+    });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const disable2FA = async (token: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const res = await fetch("/api/auth/2fa/disable", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const verifyLogin2FA = async (tempToken: string, otp: string): Promise<{ success: boolean; error?: string; user?: any }> => {
+  try {
+    const res = await fetch("/api/auth/login/verify-2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tempToken, otp })
+    });
+    return await res.json();
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 };

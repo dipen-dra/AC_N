@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Building2, Calendar, Car, Check, CheckCircle2, C
 import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
-import { getServices, createBooking } from "@/lib/db-server";
+import { getServices, getWorkshopDetails, createBooking } from "@/lib/db-server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/book")({
@@ -12,7 +12,10 @@ export const Route = createFileRoute("/book")({
       throw redirect({ to: "/login" });
     }
   },
-  loader: () => getServices(),
+  loader: async () => {
+    const [services, workshop] = await Promise.all([getServices(), getWorkshopDetails()]);
+    return { services, workshop };
+  },
   head: () => ({ meta: [{ title: "Book Service — AutoCare Nepal" }] }),
   component: Book,
 });
@@ -21,13 +24,16 @@ const steps = ["Service Details", "Vehicle & Location", "Pick-up & Drop", "Confi
 const slots = ["10:00 AM - 12:00 PM", "12:00 PM - 02:00 PM", "04:00 PM - 06:00 PM", "06:00 PM - 08:00 PM"];
 
 function Book() {
-  const services = Route.useLoaderData();
+  const { services, workshop } = Route.useLoaderData();
   const nav = useNavigate();
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(services[0]?.id || "");
   const [pickup, setPickup] = useState("pickup");
   const [slot, setSlot] = useState(slots[0]);
+  const [technician, setTechnician] = useState("Any Available Mechanic");
   const [pay, setPay] = useState<"esewa" | "khalti" | "card" | "cod">("esewa");
+  
+  const team = workshop?.team || [];
 
   // Form Fields State
   const [vehicleNumber, setVehicleNumber] = useState("BA 2 PA 5512");
@@ -63,6 +69,7 @@ function Book() {
           time: slot,
           location: address,
           price: total,
+          technician: technician,
         },
       });
 
@@ -156,24 +163,29 @@ function Book() {
                 <Field label="Full address">
                   <input value={address} onChange={(e) => setAddress(e.target.value)} className="input" />
                 </Field>
-                <SectionTitle icon={Calendar} title="Pick-up Date & Time" desc="Choose your preferred pick-up date and time" />
+                <SectionTitle icon={Calendar} title="Date & Mechanic" desc="Choose your preferred date, time, and mechanic" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Pick-up Date">
                     <input type="date" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} className="input" />
                   </Field>
-                  <Field label="Preferred Time Slot">
-                    <select value={slot} onChange={(e) => setSlot(e.target.value)} className="input">
-                      {slots.map((s) => <option key={s}>{s}</option>)}
+                  <Field label="Preferred Mechanic">
+                    <select value={technician} onChange={(e) => setTechnician(e.target.value)} className="input">
+                      <option value="Any Available Mechanic">Any Available Mechanic</option>
+                      {team.map((m: any) => (
+                        <option key={m.id || m.name} value={m.name}>{m.name} ({m.role || "Technician"})</option>
+                      ))}
                     </select>
                   </Field>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {slots.map((s) => (
-                    <button key={s} onClick={() => setSlot(s)} className={cn("rounded-lg border py-3 text-sm font-semibold", slot === s ? "border-primary bg-primary-soft text-primary" : "border-border")}>
-                      {s} {slot === s && <CheckCircle2 className="ml-2 inline h-4 w-4" />}
-                    </button>
-                  ))}
-                </div>
+                <Field label="Preferred Time Slot">
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    {slots.map((s) => (
+                      <button key={s} onClick={() => setSlot(s)} className={cn("rounded-lg border py-3 text-sm font-semibold", slot === s ? "border-primary bg-primary-soft text-primary" : "border-border")}>
+                        {s} {slot === s && <CheckCircle2 className="ml-2 inline h-4 w-4" />}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
               </div>
             )}
 

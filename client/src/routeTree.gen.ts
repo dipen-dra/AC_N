@@ -24,17 +24,20 @@ import { Route as BookRouteImport } from './routes/book'
 import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SuperadminIndexRouteImport } from './routes/superadmin.index'
+import { Route as ProfileIndexRouteImport } from './routes/profile.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as TrackIdRouteImport } from './routes/track.$id'
+import { Route as SuperadminSettingsRouteImport } from './routes/superadmin.settings'
 import { Route as SuperadminSecurityRouteImport } from './routes/superadmin.security'
 import { Route as SuperadminRolesRouteImport } from './routes/superadmin.roles'
 import { Route as SuperadminAuditRouteImport } from './routes/superadmin.audit'
+import { Route as ProfileVehiclesRouteImport } from './routes/profile.vehicles'
+import { Route as ProfileSecurityRouteImport } from './routes/profile.security'
 import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
 import { Route as AuthTwoFactorRouteImport } from './routes/auth.two-factor'
 import { Route as AuthResetRouteImport } from './routes/auth.reset'
 import { Route as AuthForgotRouteImport } from './routes/auth.forgot'
 import { Route as AdminWorkshopRouteImport } from './routes/admin.workshop'
-import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminServicesRouteImport } from './routes/admin.services'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminChatsRouteImport } from './routes/admin.chats'
@@ -116,6 +119,11 @@ const SuperadminIndexRoute = SuperadminIndexRouteImport.update({
   path: '/superadmin/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfileIndexRoute = ProfileIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProfileRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
@@ -125,6 +133,11 @@ const TrackIdRoute = TrackIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => TrackRoute,
+} as any)
+const SuperadminSettingsRoute = SuperadminSettingsRouteImport.update({
+  id: '/superadmin/settings',
+  path: '/superadmin/settings',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SuperadminSecurityRoute = SuperadminSecurityRouteImport.update({
   id: '/superadmin/security',
@@ -140,6 +153,16 @@ const SuperadminAuditRoute = SuperadminAuditRouteImport.update({
   id: '/superadmin/audit',
   path: '/superadmin/audit',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileVehiclesRoute = ProfileVehiclesRouteImport.update({
+  id: '/vehicles',
+  path: '/vehicles',
+  getParentRoute: () => ProfileRoute,
+} as any)
+const ProfileSecurityRoute = ProfileSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => ProfileRoute,
 } as any)
 const InvoiceIdRoute = InvoiceIdRouteImport.update({
   id: '/invoice/$id',
@@ -164,11 +187,6 @@ const AuthForgotRoute = AuthForgotRouteImport.update({
 const AdminWorkshopRoute = AdminWorkshopRouteImport.update({
   id: '/admin/workshop',
   path: '/admin/workshop',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/admin/settings',
-  path: '/admin/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminServicesRoute = AdminServicesRouteImport.update({
@@ -207,7 +225,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/loyalty': typeof LoyaltyRoute
   '/payment-success': typeof PaymentSuccessRoute
-  '/profile': typeof ProfileRoute
+  '/profile': typeof ProfileRouteWithChildren
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
@@ -217,17 +235,20 @@ export interface FileRoutesByFullPath {
   '/admin/chats': typeof AdminChatsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/services': typeof AdminServicesRoute
-  '/admin/settings': typeof AdminSettingsRoute
   '/admin/workshop': typeof AdminWorkshopRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/invoice/$id': typeof InvoiceIdRoute
+  '/profile/security': typeof ProfileSecurityRoute
+  '/profile/vehicles': typeof ProfileVehiclesRoute
   '/superadmin/audit': typeof SuperadminAuditRoute
   '/superadmin/roles': typeof SuperadminRolesRoute
   '/superadmin/security': typeof SuperadminSecurityRoute
+  '/superadmin/settings': typeof SuperadminSettingsRoute
   '/track/$id': typeof TrackIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -240,7 +261,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/loyalty': typeof LoyaltyRoute
   '/payment-success': typeof PaymentSuccessRoute
-  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
@@ -250,17 +270,20 @@ export interface FileRoutesByTo {
   '/admin/chats': typeof AdminChatsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/services': typeof AdminServicesRoute
-  '/admin/settings': typeof AdminSettingsRoute
   '/admin/workshop': typeof AdminWorkshopRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/invoice/$id': typeof InvoiceIdRoute
+  '/profile/security': typeof ProfileSecurityRoute
+  '/profile/vehicles': typeof ProfileVehiclesRoute
   '/superadmin/audit': typeof SuperadminAuditRoute
   '/superadmin/roles': typeof SuperadminRolesRoute
   '/superadmin/security': typeof SuperadminSecurityRoute
+  '/superadmin/settings': typeof SuperadminSettingsRoute
   '/track/$id': typeof TrackIdRoute
   '/admin': typeof AdminIndexRoute
+  '/profile': typeof ProfileIndexRoute
   '/superadmin': typeof SuperadminIndexRoute
 }
 export interface FileRoutesById {
@@ -274,7 +297,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/loyalty': typeof LoyaltyRoute
   '/payment-success': typeof PaymentSuccessRoute
-  '/profile': typeof ProfileRoute
+  '/profile': typeof ProfileRouteWithChildren
   '/register': typeof RegisterRoute
   '/regsiter': typeof RegsiterRoute
   '/services': typeof ServicesRoute
@@ -284,17 +307,20 @@ export interface FileRoutesById {
   '/admin/chats': typeof AdminChatsRoute
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/services': typeof AdminServicesRoute
-  '/admin/settings': typeof AdminSettingsRoute
   '/admin/workshop': typeof AdminWorkshopRoute
   '/auth/forgot': typeof AuthForgotRoute
   '/auth/reset': typeof AuthResetRoute
   '/auth/two-factor': typeof AuthTwoFactorRoute
   '/invoice/$id': typeof InvoiceIdRoute
+  '/profile/security': typeof ProfileSecurityRoute
+  '/profile/vehicles': typeof ProfileVehiclesRoute
   '/superadmin/audit': typeof SuperadminAuditRoute
   '/superadmin/roles': typeof SuperadminRolesRoute
   '/superadmin/security': typeof SuperadminSecurityRoute
+  '/superadmin/settings': typeof SuperadminSettingsRoute
   '/track/$id': typeof TrackIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/superadmin/': typeof SuperadminIndexRoute
 }
 export interface FileRouteTypes {
@@ -319,17 +345,20 @@ export interface FileRouteTypes {
     | '/admin/chats'
     | '/admin/customers'
     | '/admin/services'
-    | '/admin/settings'
     | '/admin/workshop'
     | '/auth/forgot'
     | '/auth/reset'
     | '/auth/two-factor'
     | '/invoice/$id'
+    | '/profile/security'
+    | '/profile/vehicles'
     | '/superadmin/audit'
     | '/superadmin/roles'
     | '/superadmin/security'
+    | '/superadmin/settings'
     | '/track/$id'
     | '/admin/'
+    | '/profile/'
     | '/superadmin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -342,7 +371,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/loyalty'
     | '/payment-success'
-    | '/profile'
     | '/register'
     | '/regsiter'
     | '/services'
@@ -352,17 +380,20 @@ export interface FileRouteTypes {
     | '/admin/chats'
     | '/admin/customers'
     | '/admin/services'
-    | '/admin/settings'
     | '/admin/workshop'
     | '/auth/forgot'
     | '/auth/reset'
     | '/auth/two-factor'
     | '/invoice/$id'
+    | '/profile/security'
+    | '/profile/vehicles'
     | '/superadmin/audit'
     | '/superadmin/roles'
     | '/superadmin/security'
+    | '/superadmin/settings'
     | '/track/$id'
     | '/admin'
+    | '/profile'
     | '/superadmin'
   id:
     | '__root__'
@@ -385,17 +416,20 @@ export interface FileRouteTypes {
     | '/admin/chats'
     | '/admin/customers'
     | '/admin/services'
-    | '/admin/settings'
     | '/admin/workshop'
     | '/auth/forgot'
     | '/auth/reset'
     | '/auth/two-factor'
     | '/invoice/$id'
+    | '/profile/security'
+    | '/profile/vehicles'
     | '/superadmin/audit'
     | '/superadmin/roles'
     | '/superadmin/security'
+    | '/superadmin/settings'
     | '/track/$id'
     | '/admin/'
+    | '/profile/'
     | '/superadmin/'
   fileRoutesById: FileRoutesById
 }
@@ -409,7 +443,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LoyaltyRoute: typeof LoyaltyRoute
   PaymentSuccessRoute: typeof PaymentSuccessRoute
-  ProfileRoute: typeof ProfileRoute
+  ProfileRoute: typeof ProfileRouteWithChildren
   RegisterRoute: typeof RegisterRoute
   RegsiterRoute: typeof RegsiterRoute
   ServicesRoute: typeof ServicesRoute
@@ -419,7 +453,6 @@ export interface RootRouteChildren {
   AdminChatsRoute: typeof AdminChatsRoute
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminServicesRoute: typeof AdminServicesRoute
-  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminWorkshopRoute: typeof AdminWorkshopRoute
   AuthForgotRoute: typeof AuthForgotRoute
   AuthResetRoute: typeof AuthResetRoute
@@ -428,6 +461,7 @@ export interface RootRouteChildren {
   SuperadminAuditRoute: typeof SuperadminAuditRoute
   SuperadminRolesRoute: typeof SuperadminRolesRoute
   SuperadminSecurityRoute: typeof SuperadminSecurityRoute
+  SuperadminSettingsRoute: typeof SuperadminSettingsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   SuperadminIndexRoute: typeof SuperadminIndexRoute
 }
@@ -539,6 +573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SuperadminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profile/': {
+      id: '/profile/'
+      path: '/'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof ProfileIndexRouteImport
+      parentRoute: typeof ProfileRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/admin'
@@ -552,6 +593,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/track/$id'
       preLoaderRoute: typeof TrackIdRouteImport
       parentRoute: typeof TrackRoute
+    }
+    '/superadmin/settings': {
+      id: '/superadmin/settings'
+      path: '/superadmin/settings'
+      fullPath: '/superadmin/settings'
+      preLoaderRoute: typeof SuperadminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/superadmin/security': {
       id: '/superadmin/security'
@@ -573,6 +621,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/superadmin/audit'
       preLoaderRoute: typeof SuperadminAuditRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/profile/vehicles': {
+      id: '/profile/vehicles'
+      path: '/vehicles'
+      fullPath: '/profile/vehicles'
+      preLoaderRoute: typeof ProfileVehiclesRouteImport
+      parentRoute: typeof ProfileRoute
+    }
+    '/profile/security': {
+      id: '/profile/security'
+      path: '/security'
+      fullPath: '/profile/security'
+      preLoaderRoute: typeof ProfileSecurityRouteImport
+      parentRoute: typeof ProfileRoute
     }
     '/invoice/$id': {
       id: '/invoice/$id'
@@ -607,13 +669,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/workshop'
       fullPath: '/admin/workshop'
       preLoaderRoute: typeof AdminWorkshopRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/admin/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/services': {
@@ -654,6 +709,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProfileRouteChildren {
+  ProfileSecurityRoute: typeof ProfileSecurityRoute
+  ProfileVehiclesRoute: typeof ProfileVehiclesRoute
+  ProfileIndexRoute: typeof ProfileIndexRoute
+}
+
+const ProfileRouteChildren: ProfileRouteChildren = {
+  ProfileSecurityRoute: ProfileSecurityRoute,
+  ProfileVehiclesRoute: ProfileVehiclesRoute,
+  ProfileIndexRoute: ProfileIndexRoute,
+}
+
+const ProfileRouteWithChildren =
+  ProfileRoute._addFileChildren(ProfileRouteChildren)
+
 interface TrackRouteChildren {
   TrackIdRoute: typeof TrackIdRoute
 }
@@ -674,7 +744,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LoyaltyRoute: LoyaltyRoute,
   PaymentSuccessRoute: PaymentSuccessRoute,
-  ProfileRoute: ProfileRoute,
+  ProfileRoute: ProfileRouteWithChildren,
   RegisterRoute: RegisterRoute,
   RegsiterRoute: RegsiterRoute,
   ServicesRoute: ServicesRoute,
@@ -684,7 +754,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminChatsRoute: AdminChatsRoute,
   AdminCustomersRoute: AdminCustomersRoute,
   AdminServicesRoute: AdminServicesRoute,
-  AdminSettingsRoute: AdminSettingsRoute,
   AdminWorkshopRoute: AdminWorkshopRoute,
   AuthForgotRoute: AuthForgotRoute,
   AuthResetRoute: AuthResetRoute,
@@ -693,6 +762,7 @@ const rootRouteChildren: RootRouteChildren = {
   SuperadminAuditRoute: SuperadminAuditRoute,
   SuperadminRolesRoute: SuperadminRolesRoute,
   SuperadminSecurityRoute: SuperadminSecurityRoute,
+  SuperadminSettingsRoute: SuperadminSettingsRoute,
   AdminIndexRoute: AdminIndexRoute,
   SuperadminIndexRoute: SuperadminIndexRoute,
 }

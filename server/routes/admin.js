@@ -3,9 +3,40 @@ const User = require("../models/User");
 const Booking = require("../models/Booking");
 const AuditLog = require("../models/AuditLog");
 const Service = require("../models/Service");
+const Settings = require("../models/Settings");
 const { requireAuth, requireRole } = require("../middleware/auth");
 
 const router = express.Router();
+
+// ─── GLOBAL SEARCH ──────────────────────────────────────────────────────────
+router.get("/search", requireAuth, requireRole(["Admin", "Superadmin"]), async (req, res) => {
+  try {
+    const q = req.query.q;
+    if (!q || typeof q !== "string" || q.trim().length < 2) {
+      return res.json([]);
+    }
+
+    const regex = new RegExp(q.trim(), "i");
+    const results = [];
+
+    // Search Customers
+    const users = await User.find({ role: "Customer", $or: [{ name: regex }, { email: regex }, { phone: regex }] }).limit(5);
+    users.forEach(u => results.push({ type: "customer", id: u.id, title: u.name, subtitle: u.email, url: "/admin/customers" }));
+
+    // Search Bookings
+    const bookings = await Booking.find({ $or: [{ id: regex }, { customer: regex }, { customerEmail: regex }, { vehicle: regex }] }).limit(5);
+    bookings.forEach(b => results.push({ type: "booking", id: b.id, title: b.id, subtitle: `${b.customer} - ${b.vehicle}`, url: "/admin/bookings" }));
+
+    // Search Services
+    const services = await Service.find({ $or: [{ name: regex }, { category: regex }] }).limit(5);
+    services.forEach(s => results.push({ type: "service", id: s.id, title: s.name, subtitle: s.category, url: "/admin/services" }));
+
+    res.json(results);
+  } catch (err) {
+    console.error("Global search error:", err);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
 
 // ─── ANALYTICS ──────────────────────────────────────────────────────────────
 router.get("/analytics", requireAuth, requireRole(["Admin", "Superadmin"]), async (req, res) => {
@@ -15,6 +46,7 @@ router.get("/analytics", requireAuth, requireRole(["Admin", "Superadmin"]), asyn
     const completedBookings = bookings.filter(b => b.status === "Completed");
     const completedRevenue = completedBookings.reduce((sum, b) => sum + b.price, 0);
     const customerCount = await User.countDocuments({ role: "Customer" });
+    const servicesCount = await Service.countDocuments({});
 
     const serviceCounts = {};
     bookings.forEach(b => { serviceCounts[b.service] = (serviceCounts[b.service] || 0) + 1; });
@@ -24,15 +56,125 @@ router.get("/analytics", requireAuth, requireRole(["Admin", "Superadmin"]), asyn
       value: Math.round((serviceCounts[name] / totalServicesCount) * 100)
     }));
 
-    const revenueData = [
-      { month: "Jan", revenue: 450000, bookings: 32 },
-      { month: "Feb", revenue: 580000, bookings: 41 },
-      { month: "Mar", revenue: 480000, bookings: 35 },
-      { month: "Apr", revenue: 720000, bookings: 53 },
-      { month: "May", revenue: completedRevenue || 880000, bookings: totalBookings || 62 }
+    // Group bookings by month for the chart
+    const monthMap = {
+      0: "Jan", 1: "Feb", 2: "Mar", 3: "Apr", 4: "May", 5: "Jun",
+      6: "Jul", 7: "Aug", 8: "Sep", 9: "Oct", 10: "Nov", 11: "Dec"
+    };
+    const revenueByMonth = {};
+    bookings.forEach(b => {
+      // Assuming b.date is parsable or b.createdAt exists
+      const date = b.createdAt ? new Date(b.createdAt) : new Date(b.date || Date.now());
+      const m = monthMap[date.getMonth()];
+      if (!revenueByMonth[m]) revenueByMonth[m] = { month: m, revenue: 0, bookings: 0 };
+      revenueByMonth[m].bookings += 1;
+      if (b.status === "Completed") revenueByMonth[m].revenue += b.price;
+    });
+
+    const revenueData = Object.values(revenueByMonth);
+    // Sort by month order roughly or just keep as is
+    const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    revenueData.sort((a, b) => monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month));
+
+    // Fill empty months up to current month if needed, but for now just return what we have
+    if (revenueData.length === 0) {
+      revenueData.push({ month: monthMap[new Date().getMonth()], revenue: 0, bookings: 0 });
+    }
+
+    // Deltas
+    let revenueDelta = "0%";
+    let bookingsDelta = "0%";
+    if (revenueData.length >= 2) {
+      const current = revenueData[revenueData.length - 1];
+      const prev = revenueData[revenueData.length - 2];
+      
+      if (prev.revenue > 0) {
+        revenueDelta = ((current.revenue - prev.revenue) / prev.revenue * 100).toFixed(1) + "%";
+        if (parseFloat(revenueDelta) > 0) revenueDelta = "+" + revenueDelta;
+      } else if (current.revenue > 0) {
+        revenueDelta = "+100%";
+      }
+
+      if (prev.bookings > 0) {
+        bookingsDelta = ((current.bookings - prev.bookings) / prev.bookings * 100).toFixed(1) + "%";
+        if (parseFloat(bookingsDelta) > 0) bookingsDelta = "+" + bookingsDelta;
+      } else if (current.bookings > 0) {
+        bookingsDelta = "+100%";
+      }
+    }
+
+    // Customer Delta
+    const users = await User.find({ role: "Customer" });
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    let currentMonthCustomers = 0;
+    let prevMonthCustomers = 0;
+
+    users.forEach(u => {
+      const d = new Date(u.createdAt || u._id.getTimestamp());
+      if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+        currentMonthCustomers++;
+      } else if (d.getFullYear() === prevYear && d.getMonth() === prevMonth) {
+        prevMonthCustomers++;
+      }
+    });
+
+    let customersDelta = "0%";
+    if (prevMonthCustomers > 0) {
+      customersDelta = ((currentMonthCustomers - prevMonthCustomers) / prevMonthCustomers * 100).toFixed(1) + "%";
+      if (parseFloat(customersDelta) > 0) customersDelta = "+" + customersDelta;
+    } else if (currentMonthCustomers > 0) {
+      customersDelta = "+100%";
+    }
+
+    // Weekly bookings
+    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const weeklyMap = { "Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0 };
+    bookings.forEach(b => {
+      const d = b.createdAt ? new Date(b.createdAt) : new Date(b.date || Date.now());
+      weeklyMap[daysOfWeek[d.getDay()]] += 1;
+    });
+    const weeklyBookings = [
+      { d: "Mon", v: weeklyMap["Mon"] },
+      { d: "Tue", v: weeklyMap["Tue"] },
+      { d: "Wed", v: weeklyMap["Wed"] },
+      { d: "Thu", v: weeklyMap["Thu"] },
+      { d: "Fri", v: weeklyMap["Fri"] },
+      { d: "Sat", v: weeklyMap["Sat"] },
+      { d: "Sun", v: weeklyMap["Sun"] }
     ];
 
-    res.json({ summary: { completedRevenue, totalBookings, customerCount }, revenueData, serviceMix });
+    // Top technicians
+    const techCounts = {};
+    bookings.forEach(b => {
+      if (b.technician && b.technician !== "-" && b.technician !== "Unassigned") {
+        techCounts[b.technician] = (techCounts[b.technician] || 0) + 1;
+      }
+    });
+    
+    // Sort and take top 4
+    const topTechnicians = Object.keys(techCounts)
+      .map(name => ({
+        n: name,
+        j: techCounts[name],
+        r: (4.5 + Math.random() * 0.5).toFixed(1) // Simulated rating between 4.5 and 5.0
+      }))
+      .sort((a, b) => b.j - a.j)
+      .slice(0, 4);
+
+    res.json({ 
+      summary: { 
+        completedRevenue, totalBookings, customerCount, servicesCount,
+        revenueDelta, bookingsDelta, customersDelta, weeklyBookings
+      }, 
+      revenueData, 
+      serviceMix,
+      topTechnicians
+    });
   } catch (err) {
     res.status(500).json({ error: "Failed to load analytics." });
   }
@@ -61,12 +203,17 @@ router.get("/customers", requireAuth, requireRole(["Admin", "Superadmin"]), asyn
         name: u.name,
         email: u.email,
         phone: u.phone || "—",
+        avatar: u.avatar || null,
+        initial: u.initial || u.name.charAt(0).toUpperCase(),
+        address: u.address || "—",
+        vehicles: u.vehicles || [],
+        lastLogin: u.lastLogin ? new Date(u.lastLogin).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "Never",
         bookings: ubs.length,
         spend,
         tier: u.tier,
         points: u.points,
         status: u.status,
-        joined: u._id.getTimestamp().toLocaleDateString("en-US", { month: "short", year: "numeric" })
+        joined: u._id.getTimestamp().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       };
     });
     res.json(data);
@@ -210,6 +357,47 @@ router.patch("/workshop", requireAuth, requireRole(["Admin", "Superadmin"]), asy
     res.json({ success: true, workshop: ws });
   } catch (err) {
     res.status(500).json({ error: "Failed to update workshop details." });
+  }
+});
+
+// ─── SETTINGS ───────────────────────────────────────────────────────────────
+router.get("/settings", requireAuth, requireRole(["Admin", "Superadmin"]), async (req, res) => {
+  try {
+    let settings = await Settings.findOne({});
+    if (!settings) {
+      settings = new Settings({});
+      await settings.save();
+    }
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load settings." });
+  }
+});
+
+router.patch("/settings", requireAuth, requireRole(["Admin", "Superadmin"]), async (req, res) => {
+  try {
+    let settings = await Settings.findOne({});
+    if (!settings) {
+      settings = new Settings(req.body);
+    } else {
+      Object.assign(settings, req.body);
+    }
+    await settings.save();
+    
+    const log = new AuditLog({ 
+      id: `L-${Date.now()}`, 
+      userEmail: req.user.email, 
+      action: `Updated global settings`, 
+      entity: `Settings`, 
+      ip: req.ip || "-", 
+      time: new Date().toLocaleString(), 
+      severity: "warn" 
+    });
+    await log.save();
+    
+    res.json({ success: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update settings." });
   }
 });
 
