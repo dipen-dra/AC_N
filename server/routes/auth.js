@@ -675,10 +675,9 @@ router.post('/forgot', authLimiter, async (req, res) => {
 
     const user = await User.findOne({ email: sanitizedEmail });
     if (user) {
-      const token = crypto.randomBytes(32).toString('hex');
+      const token = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit numeric OTP
       const expires = Date.now() + 60 * 60 * 1000; // 1 hour
       resetTokens.set(sanitizedEmail, { token, expires });
-      console.log(`[PASSWORD RESET] Token for ${sanitizedEmail}: ${token}`);
       
       // Send dynamic password reset email
       await sendPasswordResetEmail(sanitizedEmail, token);
