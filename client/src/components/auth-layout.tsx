@@ -61,7 +61,7 @@ export function GoogleButton() {
         if (json.success) {
           toast.success("Successfully logged in with Google!");
           setTimeout(() => {
-            window.location.href = "/";
+            window.location.href = "/bookings";
           }, 1000);
         } else {
           toast.error(json.error || "Google sign-in failed.");
