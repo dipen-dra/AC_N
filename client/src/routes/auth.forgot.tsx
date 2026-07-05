@@ -53,10 +53,7 @@ function Forgot() {
           <div className="grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success"><CheckCircle className="h-8 w-8" /></div>
           <div className="text-lg font-bold">Check your email!</div>
           <p className="text-sm text-muted-foreground">If an account with <strong>{email}</strong> exists, a reset link has been sent.</p>
-          <p className="text-xs text-muted-foreground bg-secondary px-3 py-2 rounded-lg">
-            🛠️ Dev mode: The reset token is printed in the server console. Use it on the reset page.
-          </p>
-          <Link to="/auth/reset" className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+          <Link to="/auth/reset" className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground cursor-pointer">
             Enter Reset Token <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
