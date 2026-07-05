@@ -164,14 +164,8 @@ function Signup() {
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="h-px flex-1 bg-border" /> or sign up with <span className="h-px flex-1 bg-border" />
         </div>
-        <div className="flex gap-3">
+        <div className="w-full flex justify-center">
           <GoogleButton />
-          <button
-            type="button"
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-card py-3 text-sm font-semibold hover:bg-secondary"
-          >
-            <Facebook className="h-4 w-4 text-info" /> Continue with Facebook
-          </button>
         </div>
         <div className="text-center text-sm text-muted-foreground">
           Already have an account? <Link to="/login" className="font-semibold text-primary hover:underline">Login</Link>
