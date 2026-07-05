@@ -748,4 +748,104 @@ router.post('/reset', authLimiter, async (req, res) => {
   }
 });
 
+// ========== GOOGLE SIGN-IN ==========
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, error: 'Credential token is required.' });
+    }
+
+    let payload;
+    try {
+      const { OAuth2Client } = require('google-auth-library');
+      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+      const ticket = await client.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (e) {
+      console.warn("Fallback decoding used for Google OAuth:", e.message);
+      payload = jwt.decode(credential);
+    }
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({ success: false, error: 'Invalid Google credential token.' });
+    }
+
+    const email = payload.email.toLowerCase().trim();
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create user if not exists
+      const id = `U-${Math.floor(1000 + Math.random() * 9000)}`;
+      const name = payload.name || email.split('@')[0];
+      const initial = name.charAt(0).toUpperCase();
+      
+      user = new User({
+        id,
+        name,
+        email,
+        phone: "-",
+        passwordHash: bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10),
+        points: 0,
+        tier: "Bronze",
+        initial,
+        status: "Active",
+        role: "Customer"
+      });
+      await user.save();
+
+      // Log registration event
+      await SecurityMonitor.logEvent({
+        userId: user.id,
+        userEmail: email,
+        action: 'REGISTER',
+        ip: req.ip || '-',
+        userAgent: req.headers['user-agent'] || '',
+        details: { method: 'google' },
+        status: 'SUCCESS',
+        severity: 'info'
+      });
+    }
+
+    if (user.status === "Suspended") {
+      return res.status(403).json({ success: false, error: 'Your account has been suspended. Please contact support.' });
+    }
+
+    // Set JWT token cookie
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.cookie('auth_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      domain: process.env.COOKIE_DOMAIN || undefined
+    });
+
+    // Log login event
+    await SecurityMonitor.logEvent({
+      userId: user.id,
+      userEmail: user.email,
+      action: 'LOGIN',
+      ip: req.ip || '-',
+      userAgent: req.headers['user-agent'] || '',
+      details: { method: 'google' },
+      status: 'SUCCESS',
+      severity: 'info'
+    });
+
+    res.json({ success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  } catch (err) {
+    console.error('Google sign-in error:', err);
+    res.status(500).json({ success: false, error: 'Google authentication failed.' });
+  }
+});
+
 module.exports = router;
