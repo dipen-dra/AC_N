@@ -50,7 +50,7 @@ function Signup() {
       if (result.success) {
         toast.success("Account created successfully!");
         await router.invalidate(); // Reload root loader
-        navigate({ to: "/bookings" });
+        navigate({ to: "/" });
       } else {
         toast.error(result.error || "Registration failed.");
       }

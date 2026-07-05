@@ -49,7 +49,7 @@ function Login() {
           } else if (result.user?.role === "Admin") {
             navigate({ to: "/admin" });
           } else {
-            navigate({ to: "/bookings" });
+            navigate({ to: "/" });
           }
         }
       } else {
