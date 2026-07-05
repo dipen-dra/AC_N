@@ -128,6 +128,13 @@ PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/autocare_nepal
 JWT_SECRET=autocare_secret_key_123456
 NODE_ENV=development
+
+# Email (SMTP Configuration)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM="AutoCare Nepal" <no-reply@autocare.com.np>
 ```
 
 ### 2. Install Project Dependencies
@@ -164,3 +171,37 @@ The MongoDB database automatically seeds the following credentials upon first se
 | **Customer** | `user@autocare.com` | `password123` | Personal Bookings, Live Tracking, Chat |
 | **Admin** | `admin@autocare.com` | `password123` | Booking management, Technician dispatch, Live Analytics |
 | **Superadmin** | `super@autocare.com` | `password123` | System Security, Access Roles, Audit Logs |
+
+---
+
+## 📧 Email Notification Service (SMTP) Setup Guide
+
+AutoCare Nepal includes an email notification system using **NodeMailer** that triggers transaction emails automatically for:
+* **Booking Creation**: Sent when a user successfully checks out (Cash/Card/eSewa/Khalti).
+* **Booking Status Revisions**: Sent when administrators assign a mechanic or update the work progress.
+* **Booking Cancellation**: Sent immediately if a customer or admin cancels the service slot.
+
+### Setup Instructions (e.g., using Gmail):
+
+1. **Activate Two-Factor Authentication (2FA)**:
+   * Go to your Google Account security settings.
+   * Ensure **2-Step Verification** is turned ON for your email.
+   
+2. **Generate an App Password**:
+   * Under your Google Account's 2-Step Verification settings page, scroll to the bottom and click on **App passwords**.
+   * Select **Mail** as the app and **Other (Custom name)** as the device (enter "AutoCare Nepal").
+   * Copy the generated **16-character security passcode** (without spaces).
+
+3. **Configure Environment Variables**:
+   * Open `/server/.env` and update the SMTP fields:
+     ```env
+     SMTP_HOST=smtp.gmail.com
+     SMTP_PORT=587
+     SMTP_USER=your-email@gmail.com
+     SMTP_PASS=your-16-character-passcode
+     SMTP_FROM="AutoCare Nepal" <no-reply@autocare.com.np>
+     ```
+
+4. **Mock Mode (Default)**:
+   * If the `SMTP_USER` and `SMTP_PASS` parameters contain default placeholders, the mailer runs in **Mock Logging Mode**.
+   * In this mode, booking notifications are formatted and logged straight to the backend terminal window instead of making network calls, preventing server crashes during offline testing.

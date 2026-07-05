@@ -3,6 +3,7 @@ const Booking = require("../models/Booking");
 const AuditLog = require("../models/AuditLog");
 const Workshop = require("../models/Workshop");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { sendBookingEmail } = require("../utils/emailService");
 
 const router = express.Router();
 
@@ -196,6 +197,7 @@ router.get("/verify-payment", requireAuth, async (req, res) => {
       booking.paymentStatus = "Paid";
       booking.esewaTransactionUuid = decoded.transaction_uuid;
       await booking.save();
+      sendBookingEmail(booking, "created");
 
       return res.json({ success: true, message: "Payment verified successfully.", booking });
     }
@@ -226,6 +228,7 @@ router.get("/verify-payment", requireAuth, async (req, res) => {
         booking.paymentStatus = "Paid";
         booking.khaltiPidx = String(token);
         await booking.save();
+        sendBookingEmail(booking, "created");
         return res.json({ success: true, message: "Payment verified successfully.", booking });
       } else if (pidx) {
         // KPG-2 (new API) Verification
@@ -257,6 +260,7 @@ router.get("/verify-payment", requireAuth, async (req, res) => {
         booking.paymentStatus = "Paid";
         booking.khaltiPidx = pidx;
         await booking.save();
+        sendBookingEmail(booking, "created");
         return res.json({ success: true, message: "Payment verified successfully.", booking });
       } else {
         return res.status(400).json({ error: "Missing pidx or token for Khalti verification." });
@@ -387,6 +391,11 @@ router.post("/", requireAuth, async (req, res) => {
       relatedId: bookingId
     }).save();
 
+    // Send email notification for COD and Card bookings (immediate completion)
+    if (paymentMethod !== "eSewa" && paymentMethod !== "Khalti") {
+      sendBookingEmail(newBooking, "created");
+    }
+
     // IF ESEWA: Generate dynamic signature and payload
     if (paymentMethod === "eSewa") {
       const esewaSecret = process.env.ESEWA_SECRET_KEY || "8gBm/:&EnhH.1/q";
@@ -479,6 +488,13 @@ router.patch("/:id/status", requireAuth, async (req, res) => {
     }
 
     await booking.save();
+
+    // Trigger email on status change
+    if (status === "Cancelled") {
+      sendBookingEmail(booking, "cancelled");
+    } else if (status) {
+      sendBookingEmail(booking, "updated");
+    }
 
     // Log audit log
     const logId = `L-${Math.floor(1000 + Math.random() * 9000)}`;
