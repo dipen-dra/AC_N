@@ -7,6 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'autocare_secret_key_123456';
 const authenticateUser = async (req, res, next) => {
   try {
     const token = req.cookies?.auth_session || req.headers.authorization?.split(' ')[1];
+    console.log(`[AUTH DEBUG] Path: ${req.path}, Has Token: ${!!token}, Cookies:`, req.cookies);
     if (!token) {
       req.user = null;
       return next();
@@ -15,18 +16,22 @@ const authenticateUser = async (req, res, next) => {
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET);
+      console.log(`[AUTH DEBUG] Decoded token:`, decoded);
     } catch (err) {
+      console.log(`[AUTH DEBUG] JWT verify failed:`, err.message);
       req.user = null;
       return next();
     }
 
     const user = await User.findById(decoded.dbId);
     if (!user) {
+      console.log(`[AUTH DEBUG] User not found by dbId: ${decoded.dbId}`);
       req.user = null;
       return next();
     }
 
     if (user.status === 'Inactive' || user.status === 'Suspended') {
+      console.log(`[AUTH DEBUG] User inactive/suspended: status=${user.status}`);
       req.user = null;
       return next();
     }
@@ -35,6 +40,7 @@ const authenticateUser = async (req, res, next) => {
     req.userId = user.id;
     next();
   } catch (err) {
+    console.error(`[AUTH DEBUG] authenticateUser exception:`, err);
     req.user = null;
     next();
   }

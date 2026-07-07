@@ -811,7 +811,7 @@ router.post('/google', async (req, res) => {
 
     // Set JWT token cookie
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, dbId: user._id, role: user.role },
       JWT_SECRET,
       { expiresIn: '24h' }
     );

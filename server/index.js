@@ -5,11 +5,11 @@ const cookieParser = require("cookie-parser");
 const helmet = require('helmet');
 const dotenv = require('dotenv');
 
+// Load Environment variables first
+dotenv.config();
+
 const connectDB = require("./config/db");
 const { authenticateUser } = require("./middleware/auth");
-
-// Load Environment variables
-dotenv.config();
 
 const app = express();
 
